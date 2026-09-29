@@ -64,10 +64,28 @@ void Shop::BuildRacks() {
                        ProductType::CANNED_FOOD, 12, 20,
                        Color{ 130, 90, 90, 255 }, Color{ 170, 120, 120, 255 });
 
-    // Rack 4: Center Island Display Table -> Minuman cadangan / promo (initial stock = 6)
+    // Rack 4: Center Island Display Table -> Minuman promo (initial stock = 6)
     racks.emplace_back(4, Vector3{ 0.0f, 0.7f, -3.0f }, Vector3{ 3.0f, 1.4f, 4.0f },
                        ProductType::BEVERAGE, 6, 15,
                        Color{ 60, 100, 140, 255 }, Color{ 90, 140, 190, 255 });
+}
+
+Vector3 Shop::GetRackFrontPosition(size_t rackIndex) const {
+    if (rackIndex >= racks.size()) return { 0.0f, 0.0f, 0.0f };
+
+    Vector3 rackPos = racks[rackIndex].GetPosition();
+    
+    // Standing spot in the aisle facing the rack
+    if (rackPos.x < -2.0f) {
+        // Left aisle racks: standing spot is inside the aisle (x = -3.2f)
+        return { -3.2f, 0.0f, rackPos.z };
+    } else if (rackPos.x > 2.0f) {
+        // Right aisle racks: standing spot is inside the aisle (x = 3.2f)
+        return { 3.2f, 0.0f, rackPos.z };
+    } else {
+        // Center island: standing spot on front side (z = -0.5f)
+        return { 0.0f, 0.0f, -0.6f };
+    }
 }
 
 std::vector<AABB> Shop::GetColliders() const {

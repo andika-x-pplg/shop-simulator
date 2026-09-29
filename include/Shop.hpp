@@ -1,6 +1,7 @@
 #pragma once
 #include "Common.hpp"
 #include "Rack.hpp"
+#include "Customer.hpp"
 #include <vector>
 #include <memory>
 
@@ -34,6 +35,10 @@ public:
 
     // Find the rack player is aiming at within interaction range
     Rack* GetTargetedRack(Vector3 playerEyePos, Vector3 playerLookDir, float maxDistance = 3.5f);
+
+    // Get front standing/browsing position for a given rack index
+    Vector3 GetRackFrontPosition(size_t rackIndex) const;
+    size_t GetRackCount() const { return racks.size(); }
 
 private:
     float shopWidth;

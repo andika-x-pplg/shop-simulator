@@ -25,6 +25,20 @@ Game simulasi toko 3D modern berbasis C++17 dan raylib 5.0 tanpa game engine ber
   - Mengembalikan produk ke rak yang sesuai menambah stok rak dan mengosongkan tangan.
   - Pesan peringatan jika rak habis, penuh, atau jenis produk tidak cocok.
 
+## Fitur Tahap 3 (Sistem Customer / NPC Dasar)
+- **Class `Customer`**: Model humanoid 3D (kepala sphere, badan cube berkaos warna-warni, kaki beranimasi langkah kaki, dan marker status di atas kepala).
+- **Customer Lifecycle & Finite State Machine (FSM)**:
+  - `ENTERING`: Muncul di luar toko, berjalan menuju pintu masuk toko.
+  - `WALKING_TO_SHELF`: Masuk melewati pintu, berjalan di lorong toko menuju rak target.
+  - `AT_SHELF`: Berhenti di depan rak selama 3.5 - 5.5 detik untuk melihat produk.
+  - `LEAVING`: Berjalan dari rak kembali ke lorong utama menuju pintu keluar.
+  - `EXITING`: Keluar melewati pintu toko ke area luar.
+  - `DESPAWNED`: Hilang setelah mencapai titik despawn luar.
+- **Spawn Loop & Batasan**:
+  - Maksimal 3 customer aktif sekaligus di dalam/luar toko.
+  - Customer baru di-spawn secara berkala dengan variasi nama, warna pakaian, dan pemilihan rak target yang acak/berotasi.
+- **HUD Customer Tracker**: Menampilkan jumlah customer aktif (`Customer Aktif: X/3`) dan status/nama customer terkini.
+
 ## Struktur Project
 ```text
 shop-simulator/
@@ -32,15 +46,17 @@ shop-simulator/
 ├── README.md           # Dokumentasi project
 ├── include/            # C++ Header files
 │   ├── Common.hpp      # Struktur matematika & AABB bounding box
+│   ├── Customer.hpp    # Class Customer (FSM, waypoints, & visual NPC)
 │   ├── Player.hpp      # Controller first person, held item & feedback
 │   ├── Product.hpp     # Definisi tipe produk, dimensi & properti visual
 │   ├── Rack.hpp        # Class Rack (stok, visual items di rak & interaksi)
-│   └── Shop.hpp        # Geometri toko, layout rak, dan collision list
+│   └── Shop.hpp        # Geometri toko, layout rak, waypoint navigasi & collision
 ├── src/                # C++ Source files
-│   ├── main.cpp        # Game loop, input handling tombol E, HUD & UI
+│   ├── main.cpp        # Game loop, customer spawner, input handling & HUD
+│   ├── Customer.cpp    # Navigasi waypoint NPC, update state & render 3D
 │   ├── Player.cpp      # Pergerakan, first-person camera & render held item
 │   ├── Rack.cpp        # Implementasi render rak bertingkat & visual produk
-│   └── Shop.cpp        # Layout penempatan rak toko & collider
+│   └── Shop.cpp        # Layout penempatan rak toko, waypoint & collider
 └── assets/             # Direktori aset (models, textures, sounds, fonts)
 ```
 
@@ -51,11 +67,6 @@ shop-simulator/
 - **ESC**: Keluar dari game
 
 ## Cara Build & Menjalankan (Windows)
-
-### Prasyarat
-- CMake (>= 3.20)
-- MinGW64 (GCC / G++)
-- Ninja Build System
 
 ### Command Build:
 ```powershell
