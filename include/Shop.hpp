@@ -1,6 +1,8 @@
 #pragma once
 #include "Common.hpp"
+#include "Rack.hpp"
 #include <vector>
+#include <memory>
 
 struct Wall {
     Vector3 position;
@@ -8,7 +10,7 @@ struct Wall {
     Color color;
 };
 
-struct Shelf {
+struct CounterTable {
     Vector3 position;
     Vector3 size;
     Color color;
@@ -22,7 +24,16 @@ public:
 
     void Init();
     void Render();
-    const std::vector<AABB>& GetColliders() const { return colliders; }
+    
+    // Colliders for physics
+    std::vector<AABB> GetColliders() const;
+
+    // Rack access and interaction
+    std::vector<Rack>& GetRacks() { return racks; }
+    const std::vector<Rack>& GetRacks() const { return racks; }
+
+    // Find the rack player is aiming at within interaction range
+    Rack* GetTargetedRack(Vector3 playerEyePos, Vector3 playerLookDir, float maxDistance = 3.5f);
 
 private:
     float shopWidth;
@@ -30,9 +41,9 @@ private:
     float shopHeight;
 
     std::vector<Wall> walls;
-    std::vector<Shelf> shelves;
-    std::vector<AABB> colliders;
+    std::vector<CounterTable> counterTables;
+    std::vector<Rack> racks;
 
     void BuildStructure();
-    void BuildColliders();
+    void BuildRacks();
 };

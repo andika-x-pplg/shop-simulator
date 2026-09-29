@@ -25,12 +25,15 @@ set(SOURCES
     src/main.cpp
     src/Player.cpp
     src/Shop.cpp
+    src/Rack.cpp
 )
 
 # Header files for IDE navigation
 set(HEADERS
     include/Player.hpp
     include/Shop.hpp
+    include/Rack.hpp
+    include/Product.hpp
     include/Common.hpp
 )
 

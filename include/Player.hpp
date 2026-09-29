@@ -1,6 +1,8 @@
 #pragma once
 #include "Common.hpp"
+#include "Product.hpp"
 #include <vector>
+#include <string>
 
 class Player {
 public:
@@ -9,9 +11,24 @@ public:
 
     void Init(Vector3 startPosition);
     void Update(float deltaTime, const std::vector<AABB>& colliders);
+    void RenderHeldItem();
     
     Camera3D GetCamera() const { return camera; }
     Vector3 GetPosition() const { return position; }
+    Vector3 GetEyePosition() const;
+    Vector3 GetLookDirection() const;
+
+    // Carrying product slot
+    ProductType GetHeldProduct() const { return heldProduct; }
+    std::string GetHeldProductName() const;
+    bool IsHoldingProduct() const { return heldProduct != ProductType::NONE; }
+    void PickUpProduct(ProductType product);
+    ProductType DropOrPlaceProduct();
+
+    // Feedback message (e.g. "Tangan penuh!", "Stok rak kosong!")
+    void SetFeedbackMessage(const std::string& msg, float duration = 2.0f);
+    std::string GetFeedbackMessage() const { return feedbackMessage; }
+    bool HasFeedbackMessage() const { return feedbackTimer > 0.0f; }
 
 private:
     Camera3D camera;
@@ -24,8 +41,15 @@ private:
     float playerHeight;
     float eyeHeight;
 
-    float pitch; // Camera vertical angle (radians or degrees)
-    float yaw;   // Camera horizontal angle
+    float pitch;
+    float yaw;
+
+    // Single item carrying system
+    ProductType heldProduct;
+
+    // Feedback message timer
+    std::string feedbackMessage;
+    float feedbackTimer;
 
     void HandleMouseLook();
     void HandleMovement(float deltaTime, const std::vector<AABB>& colliders);

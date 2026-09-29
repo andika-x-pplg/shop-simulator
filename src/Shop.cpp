@@ -7,12 +7,12 @@ Shop::Shop()
 
 void Shop::Init() {
     BuildStructure();
-    BuildColliders();
+    BuildRacks();
 }
 
 void Shop::BuildStructure() {
     walls.clear();
-    shelves.clear();
+    counterTables.clear();
 
     float halfW = shopWidth / 2.0f;
     float halfL = shopLength / 2.0f;
@@ -30,8 +30,7 @@ void Shop::BuildStructure() {
     // East Wall (Right)
     walls.push_back({ { halfW, shopHeight / 2.0f, 0.0f }, { wallThickness, shopHeight, shopLength }, wallColor });
 
-    // South Wall (Front) with Door opening in the center
-    // Door opening is 4.0m wide (from -2.0 to 2.0)
+    // South Wall (Front) with Door opening in the center (4.0m wide from -2.0 to 2.0)
     float sideWallWidth = (shopWidth - 4.0f) / 2.0f;
     float leftWallX = -halfW + sideWallWidth / 2.0f;
     float rightWallX = halfW - sideWallWidth / 2.0f;
@@ -43,27 +42,36 @@ void Shop::BuildStructure() {
     // Top Door Frame
     walls.push_back({ { 0.0f, shopHeight - 0.6f, halfL }, { 4.0f, 1.2f, wallThickness }, { 100, 110, 120, 255 } });
 
-    // Store Shelves / Gondolas (Aisles)
-    Color shelfWoodColor = { 130, 90, 60, 255 };
-    Color shelfTopColor = { 160, 120, 80, 255 };
-
-    // Aisle 1 (Left Aisle: 2 shelves)
-    shelves.push_back({ { -5.5f, 1.1f, -4.0f }, { 2.0f, 2.2f, 6.0f }, shelfWoodColor, shelfTopColor });
-    shelves.push_back({ { -5.5f, 1.1f, 4.0f }, { 2.0f, 2.2f, 6.0f }, shelfWoodColor, shelfTopColor });
-
-    // Aisle 2 (Right Aisle: 2 shelves)
-    shelves.push_back({ { 5.5f, 1.1f, -4.0f }, { 2.0f, 2.2f, 6.0f }, shelfWoodColor, shelfTopColor });
-    shelves.push_back({ { 5.5f, 1.1f, 4.0f }, { 2.0f, 2.2f, 6.0f }, shelfWoodColor, shelfTopColor });
-
-    // Center Island Display Table
-    shelves.push_back({ { 0.0f, 0.6f, -3.0f }, { 3.0f, 1.2f, 4.0f }, { 80, 130, 180, 255 }, { 100, 160, 210, 255 } });
-
-    // Counter table near entrance
-    shelves.push_back({ { 5.0f, 0.6f, 9.0f }, { 4.0f, 1.2f, 1.5f }, { 70, 75, 80, 255 }, { 90, 95, 100, 255 } });
+    // Counter table near entrance (decorative shop counter)
+    counterTables.push_back({ { 5.5f, 0.6f, 8.5f }, { 3.5f, 1.2f, 1.6f }, { 70, 75, 80, 255 }, { 90, 95, 100, 255 } });
 }
 
-void Shop::BuildColliders() {
-    colliders.clear();
+void Shop::BuildRacks() {
+    racks.clear();
+
+    // Rack 1: Left-Back Aisle -> Minuman (Beverage), initial stock = 10, max stock = 20
+    racks.emplace_back(1, Vector3{ -5.5f, 1.1f, -4.0f }, Vector3{ 2.0f, 2.2f, 5.5f },
+                       ProductType::BEVERAGE, 10, 20,
+                       Color{ 110, 130, 150, 255 }, Color{ 140, 170, 200, 255 });
+
+    // Rack 2: Left-Front Aisle -> Roti (Bread), initial stock = 8, max stock = 20
+    racks.emplace_back(2, Vector3{ -5.5f, 1.1f, 3.5f }, Vector3{ 2.0f, 2.2f, 5.5f },
+                       ProductType::BREAD, 8, 20,
+                       Color{ 140, 110, 80, 255 }, Color{ 180, 140, 100, 255 });
+
+    // Rack 3: Right Aisle -> Makanan Kaleng (Canned Food), initial stock = 12, max stock = 20
+    racks.emplace_back(3, Vector3{ 5.5f, 1.1f, -2.5f }, Vector3{ 2.0f, 2.2f, 7.0f },
+                       ProductType::CANNED_FOOD, 12, 20,
+                       Color{ 130, 90, 90, 255 }, Color{ 170, 120, 120, 255 });
+
+    // Rack 4: Center Island Display Table -> Minuman cadangan / promo (initial stock = 6)
+    racks.emplace_back(4, Vector3{ 0.0f, 0.7f, -3.0f }, Vector3{ 3.0f, 1.4f, 4.0f },
+                       ProductType::BEVERAGE, 6, 15,
+                       Color{ 60, 100, 140, 255 }, Color{ 90, 140, 190, 255 });
+}
+
+std::vector<AABB> Shop::GetColliders() const {
+    std::vector<AABB> colliders;
 
     // Wall colliders
     for (const auto& w : walls) {
@@ -73,20 +81,44 @@ void Shop::BuildColliders() {
         colliders.push_back(box);
     }
 
-    // Shelf colliders
-    for (const auto& s : shelves) {
+    // Counter table colliders
+    for (const auto& c : counterTables) {
         AABB box;
-        box.min = { s.position.x - s.size.x / 2.0f, 0.0f, s.position.z - s.size.z / 2.0f };
-        box.max = { s.position.x + s.size.x / 2.0f, s.position.y + s.size.y / 2.0f, s.position.z + s.size.z / 2.0f };
+        box.min = { c.position.x - c.size.x / 2.0f, 0.0f, c.position.z - c.size.z / 2.0f };
+        box.max = { c.position.x + c.size.x / 2.0f, c.position.y + c.size.y / 2.0f, c.position.z + c.size.z / 2.0f };
         colliders.push_back(box);
     }
+
+    // Rack colliders
+    for (const auto& r : racks) {
+        colliders.push_back(r.GetCollider());
+    }
+
+    return colliders;
+}
+
+Rack* Shop::GetTargetedRack(Vector3 playerEyePos, Vector3 playerLookDir, float maxDistance) {
+    Rack* bestRack = nullptr;
+    float closestDist = maxDistance + 1.0f;
+
+    for (auto& r : racks) {
+        if (r.IsPlayerLookingAt(playerEyePos, playerLookDir, maxDistance)) {
+            float d = Vector3Distance(playerEyePos, r.GetPosition());
+            if (d < closestDist) {
+                closestDist = d;
+                bestRack = &r;
+            }
+        }
+    }
+
+    return bestRack;
 }
 
 void Shop::Render() {
     // Floor
-    DrawPlane({ 0.0f, 0.0f, 0.0f }, { shopWidth + 8.0f, shopLength + 8.0f }, { 210, 215, 210, 255 }); // ground
-    DrawCube({ 0.0f, -0.05f, 0.0f }, shopWidth, 0.1f, shopLength, { 240, 240, 245, 255 }); // shop tile floor
-    DrawGrid((int)(shopLength / 2), 2.0f); // grid texture feel
+    DrawPlane({ 0.0f, 0.0f, 0.0f }, { shopWidth + 8.0f, shopLength + 8.0f }, { 210, 215, 210, 255 }); // Outside ground
+    DrawCube({ 0.0f, -0.05f, 0.0f }, shopWidth, 0.1f, shopLength, { 240, 240, 245, 255 }); // Shop tile floor
+    DrawGrid((int)(shopLength / 2), 2.0f); // Tile grid lines
 
     // Ceiling
     DrawCube({ 0.0f, shopHeight + 0.05f, 0.0f }, shopWidth, 0.1f, shopLength, { 180, 185, 190, 255 });
@@ -97,23 +129,20 @@ void Shop::Render() {
         DrawCubeWires(w.position, w.size.x, w.size.y, w.size.z, { 70, 75, 80, 255 });
     }
 
-    // Door Frame Posts (accents)
+    // Door Frame Posts
     DrawCube({ -2.0f, 1.8f, shopLength / 2.0f }, 0.2f, 3.6f, 0.6f, { 80, 85, 90, 255 });
     DrawCube({ 2.0f, 1.8f, shopLength / 2.0f }, 0.2f, 3.6f, 0.6f, { 80, 85, 90, 255 });
 
-    // Render Shelves
-    for (const auto& s : shelves) {
-        DrawCube(s.position, s.size.x, s.size.y, s.size.z, s.color);
-        DrawCubeWires(s.position, s.size.x, s.size.y, s.size.z, { 40, 40, 45, 255 });
-        
-        // Shelf Top highlight
-        Vector3 topPos = { s.position.x, s.position.y + s.size.y / 2.0f - 0.05f, s.position.z };
-        DrawCube(topPos, s.size.x + 0.1f, 0.1f, s.size.z + 0.1f, s.topColor);
+    // Render Counter Tables
+    for (const auto& c : counterTables) {
+        DrawCube(c.position, c.size.x, c.size.y, c.size.z, c.color);
+        DrawCubeWires(c.position, c.size.x, c.size.y, c.size.z, { 40, 40, 45, 255 });
+        Vector3 topPos = { c.position.x, c.position.y + c.size.y / 2.0f - 0.05f, c.position.z };
+        DrawCube(topPos, c.size.x + 0.1f, 0.1f, c.size.z + 0.1f, c.topColor);
+    }
 
-        // Sub-tier shelf lines to give realistic shop rack appearance
-        if (s.size.y > 1.5f) {
-            Vector3 midPos = { s.position.x, s.position.y, s.position.z };
-            DrawCube(midPos, s.size.x + 0.05f, 0.08f, s.size.z + 0.05f, s.topColor);
-        }
+    // Render all Racks and their visual products
+    for (auto& r : racks) {
+        r.Render();
     }
 }
