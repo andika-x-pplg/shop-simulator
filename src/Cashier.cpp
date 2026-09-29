@@ -75,7 +75,7 @@ bool Cashier::ProcessPayment(int customerId, const std::string& customerName, Pr
     }
 
     ProductInfo info = GetProductInfo(product);
-    outAmount = info.price;
+    outAmount = info.sellPrice;
     return true;
 }
 

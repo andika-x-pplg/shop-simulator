@@ -2,10 +2,11 @@
 #include "Common.hpp"
 #include "Rack.hpp"
 #include "Cashier.hpp"
+#include "Storage.hpp"
 #include <vector>
 #include <memory>
 
-class Customer; // Forward declaration
+class Customer;
 
 struct Wall {
     Vector3 position;
@@ -33,6 +34,10 @@ public:
     Cashier& GetCashier() { return cashier; }
     const Cashier& GetCashier() const { return cashier; }
 
+    // Storage access
+    Storage& GetStorage() { return storage; }
+    const Storage& GetStorage() const { return storage; }
+
     // Find the rack player is aiming at within interaction range
     Rack* GetTargetedRack(Vector3 playerEyePos, Vector3 playerLookDir, float maxDistance = 3.5f);
 
@@ -50,6 +55,7 @@ private:
 
     std::vector<Wall> walls;
     Cashier cashier;
+    Storage storage;
     std::vector<Rack> racks;
 
     void BuildStructure();

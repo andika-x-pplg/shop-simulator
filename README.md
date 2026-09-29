@@ -58,6 +58,36 @@ Game simulasi toko 3D modern berbasis C++17 dan raylib 5.0 tanpa game engine ber
 - **Informasi Kasir**:
   - HUD menampilkan saldo uang toko secara realtime (`Uang Toko: RpXXXXX`), jumlah antrean kasir, serta info prompt ketika pemain mendekati area kasir.
 
+## Fitur Tahap 6 (Sistem Supplier, Pengadaan Barang, Delivery, dan Restock)
+- **Sistem Supplier & Harga Grosir (`Product.hpp`, `Supplier.hpp`, `Supplier.cpp`)**:
+  - Minuman: Harga Beli Supplier = Rp3.000 | Harga Jual Customer = Rp5.000 (Margin Rp2.000)
+  - Roti: Harga Beli Supplier = Rp5.000 | Harga Jual Customer = Rp8.000 (Margin Rp3.000)
+  - Makanan Kaleng: Harga Beli Supplier = Rp8.000 | Harga Jual Customer = Rp12.000 (Margin Rp4.000)
+- **Menu Pengadaan Barang Supplier (Tombol `TAB`)**:
+  - Modal UI interaktif untuk memilih produk grosir dan mengatur kuantitas order (+1, -1, +5).
+  - Penghitungan total harga pesanan secara otomatis dan realtime.
+  - Validasi saldo toko: Pembelian diproteksi dan ditolak jika saldo toko tidak mencukupi, dengan notifikasi *"Uang tidak cukup!"*.
+  - Saldo toko dipotong otomatis saat pesanan berhasil dibuat.
+- **Sistem Pesanan & Timer Delivery (`OrderStatus`)**:
+  - Siklus pesanan: `ORDERED` -> `DELIVERING` (Timer 5 detik) -> `ARRIVED`.
+  - Animasi progress bar pengiriman delivery pada overlay menu dan banner notifikasi saat pesanan tiba.
+- **Area Penyimpanan / Gudang Toko (`Storage.hpp`, `Storage.cpp`)**:
+  - Area gudang 3D di bagian belakang toko dengan 3 pallet kayu khusus untuk tiap jenis produk.
+  - Visual tumpukan box/kardus 3D bertingkat yang bertambah dan berkurang secara dinamis sesuai jumlah stok di Storage.
+  - Collider fisik AABB agar pemain dan NPC tidak menembus pallet penyimpanan.
+- **Pemisahan Sistem Dua Jenis Stok**:
+  - **Storage Stock**: Stok cadangan hasil pengadaan supplier di gudang.
+  - **Shelf Stock**: Stok pajangan di rak toko yang dapat dibeli oleh customer.
+- **Interaksi Restock Manual oleh Player (Tombol `E`)**:
+  - Mengambil 1 unit barang dari pallet storage (menampilkan prompt *"Tekan E untuk mengambil [Produk]"*).
+  - Membawa produk 3D di tangan ke rak toko yang sesuai.
+  - Melakukan restock ke rak dengan menekan `E` (menampilkan prompt *"Tekan E untuk restock [Produk]"*).
+  - Validasi kecocokan rak (menolak jika produk tidak sesuai rak) dan kapasitas maksimum rak (menolak jika rak penuh).
+  - Pemain dapat mengembalikan barang yang sedang dibawa kembali ke pallet storage.
+- **HUD & Status Notifikasi**:
+  - Informasi perbandingan realtime stok rak (*Shelf Stock*) dan stok gudang (*Storage Stock*).
+  - Banner notifikasi delivery pesanan tiba dan feedback popup interaksi restock.
+
 ## Struktur Project
 ```text
 shop-simulator/
@@ -68,23 +98,31 @@ shop-simulator/
 │   ├── Common.hpp      # Struktur matematika & AABB bounding box
 │   ├── Customer.hpp    # Class Customer (FSM, shopping, cashier queue & payment)
 │   ├── Player.hpp      # Controller first person, held item & feedback
-│   ├── Product.hpp     # Definisi produk, dimensi visual, dan harga Rupiah
-│   ├── Rack.hpp        # Class Rack (stok, visual items di rak & interaksi)
-│   └── Shop.hpp        # Geometri toko, layout rak, kasir & collision list
+│   ├── Product.hpp     # Definisi produk, harga jual, harga beli supplier, & visual
+│   ├── Rack.hpp        # Class Rack (stok rak, kapasitas maks, visual items di rak & interaksi)
+│   ├── Shop.hpp        # Geometri toko, layout rak, kasir, storage pallets & collision list
+│   ├── Storage.hpp     # Class Storage (pallet kayu 3D, visual tumpukan kardus & stok gudang)
+│   └── Supplier.hpp    # Class Supplier (katalog produk supplier, order queue & delivery timer)
 ├── src/                # C++ Source files
 │   ├── Cashier.cpp     # Render kasir 3D, NPC kasir berseragam, mesin register & pembayaran
 │   ├── Customer.cpp    # Navigasi lorong, antrean kasir, checkout & status tag
 │   ├── Player.cpp      # Pergerakan, first-person camera & render held item
-│   ├── Rack.cpp        # Implementasi render rak bertingkat & visual produk
-│   ├── Shop.cpp        # Layout toko, penempatan rak, kasir, waypoint & collider
-│   └── main.cpp        # Game loop, saldo toko, antrean kasir, notifikasi & HUD
+│   ├── Rack.cpp        # Implementasi render rak bertingkat, batas kapasitas & visual produk
+│   ├── Shop.cpp        # Layout toko, penempatan rak, kasir, storage gudang, waypoint & collider
+│   ├── Storage.cpp     # Render pallet gudang 3D & manajemen stok gudang
+│   ├── Supplier.cpp    # Pengadaan barang, countdown delivery & transfer stok otomatis ke gudang
+│   └── main.cpp        # Game loop, menu supplier (TAB), restock loop, notifikasi & HUD
 └── assets/             # Direktori aset (models, textures, sounds, fonts)
 ```
 
 ## Kontrol
 - **W / A / S / D**: Bergerak maju, kiri, mundur, kanan
 - **Mouse**: Mengarahkan pandangan kamera (Pitch / Yaw)
-- **E**: Interaksi Player (Mengambil produk dari rak / Menaruh produk ke rak)
+- **E**: Interaksi Player (Ambil dari storage / Restock ke rak / Taruh kembali ke storage)
+- **TAB**: Buka / Tutup Menu Pengadaan Barang Supplier
+- **1, 2, 3**: Pilih jenis produk di Menu Supplier
+- **Panah Atas / Bawah (+ / -)**: Menambah atau mengurangi jumlah pesanan supplier
+- **ENTER**: Beli & Bayar Pesanan Supplier
 - **ESC**: Keluar dari game
 
 ## Cara Build & Menjalankan (Windows)

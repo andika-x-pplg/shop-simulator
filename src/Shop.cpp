@@ -10,6 +10,7 @@ void Shop::Init() {
     BuildStructure();
     BuildRacks();
     cashier.Init();
+    storage.Init();
 }
 
 void Shop::Update(float deltaTime) {
@@ -51,25 +52,24 @@ void Shop::BuildStructure() {
 void Shop::BuildRacks() {
     racks.clear();
 
-    // Rack 1: Left-Back Aisle -> Minuman (Beverage), initial stock = 10, max stock = 20
+    // Rack 1: Left-Back Aisle -> Minuman (Beverage), initial stock = 2, max stock = 10
     racks.emplace_back(1, Vector3{ -5.5f, 1.1f, -4.0f }, Vector3{ 2.0f, 2.2f, 5.5f },
-                       ProductType::BEVERAGE, 10, 20,
+                       ProductType::BEVERAGE, 2, 10,
                        Color{ 110, 130, 150, 255 }, Color{ 140, 170, 200, 255 });
 
-    // Rack 2: Left-Front Aisle -> Roti (Bread), initial stock = 8, max stock = 20
+    // Rack 2: Left-Front Aisle -> Roti (Bread), initial stock = 5, max stock = 10
     racks.emplace_back(2, Vector3{ -5.5f, 1.1f, 3.5f }, Vector3{ 2.0f, 2.2f, 5.5f },
-                       ProductType::BREAD, 8, 20,
+                       ProductType::BREAD, 5, 10,
                        Color{ 140, 110, 80, 255 }, Color{ 180, 140, 100, 255 });
 
-    // Rack 3: Right Aisle -> Makanan Kaleng (Canned Food), initial stock = 12, max stock = 20
+    // Rack 3: Right Aisle -> Makanan Kaleng (Canned Food), initial stock = 3, max stock = 10
     racks.emplace_back(3, Vector3{ 5.5f, 1.1f, -2.5f }, Vector3{ 2.0f, 2.2f, 7.0f },
-                       ProductType::CANNED_FOOD, 12, 20,
+                       ProductType::CANNED_FOOD, 3, 10,
                        Color{ 130, 90, 90, 255 }, Color{ 170, 120, 120, 255 });
 
-    // Rack 4: Center Island Display Table -> Minuman promo (initial stock = 6)
-    // Shifted slightly deeper (Z = -6.5f) to give a wide, open walkway in front (Z = -0.5 to Z = 8.5)
+    // Rack 4: Center Island Display Table -> Minuman promo (initial stock = 2, max stock = 10)
     racks.emplace_back(4, Vector3{ 0.0f, 0.7f, -6.5f }, Vector3{ 3.0f, 1.4f, 4.0f },
-                       ProductType::BEVERAGE, 6, 15,
+                       ProductType::BEVERAGE, 2, 10,
                        Color{ 60, 100, 140, 255 }, Color{ 90, 140, 190, 255 });
 }
 
@@ -105,7 +105,6 @@ int Shop::FindAvailableRackIndex(int preferredStartIndex) const {
         }
     }
 
-    // No racks have stock available
     return -1;
 }
 
@@ -122,6 +121,10 @@ std::vector<AABB> Shop::GetColliders() const {
 
     // Cashier counter collider
     colliders.push_back(cashier.GetCollider());
+
+    // Storage pallets collider
+    auto storageColliders = storage.GetColliders();
+    colliders.insert(colliders.end(), storageColliders.begin(), storageColliders.end());
 
     // Rack colliders
     for (const auto& r : racks) {
@@ -169,6 +172,9 @@ void Shop::Render() {
 
     // Render Cashier Counter & POS System
     cashier.Render();
+
+    // Render Storage Warehouse Area
+    storage.Render();
 
     // Render all Racks and their visual products
     for (auto& r : racks) {

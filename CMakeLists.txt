@@ -28,6 +28,8 @@ set(SOURCES
     src/Rack.cpp
     src/Customer.cpp
     src/Cashier.cpp
+    src/Storage.cpp
+    src/Supplier.cpp
 )
 
 # Header files for IDE navigation
@@ -38,6 +40,8 @@ set(HEADERS
     include/Product.hpp
     include/Customer.hpp
     include/Cashier.hpp
+    include/Storage.hpp
+    include/Supplier.hpp
     include/Common.hpp
 )
 
