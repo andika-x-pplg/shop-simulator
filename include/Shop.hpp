@@ -1,9 +1,10 @@
 #pragma once
 #include "Common.hpp"
 #include "Rack.hpp"
-#include "Customer.hpp"
 #include <vector>
 #include <memory>
+
+class Customer; // Forward declaration
 
 struct Wall {
     Vector3 position;
@@ -39,6 +40,10 @@ public:
     // Get front standing/browsing position for a given rack index
     Vector3 GetRackFrontPosition(size_t rackIndex) const;
     size_t GetRackCount() const { return racks.size(); }
+
+    // Customer navigation: Find a rack that has stock > 0
+    // Returns index of rack in racks vector, or -1 if no racks have stock
+    int FindAvailableRackIndex(int preferredStartIndex = 0) const;
 
 private:
     float shopWidth;

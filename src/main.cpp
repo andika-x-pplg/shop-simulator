@@ -12,7 +12,7 @@ int main() {
     const int screenHeight = 720;
     
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
-    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Tahap 3: Customer / NPC System");
+    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Tahap 4: Customer Shopping System");
 
     SetTargetFPS(60);
 
@@ -110,12 +110,6 @@ int main() {
             Color cSkin = skinColors[customerCounter % skinColors.size()];
 
             Customer newCust(customerCounter, cName, spawnPos, cSkin, cShirt);
-            
-            // Assign a target rack (randomized among available shop racks)
-            size_t targetRackIdx = (size_t)(customerCounter % shop.GetRackCount());
-            Vector3 rackFront = shop.GetRackFrontPosition(targetRackIdx);
-            newCust.SetTargetRack(rackFront, (int)targetRackIdx);
-
             customers.push_back(newCust);
             customerCounter++;
             
@@ -123,9 +117,9 @@ int main() {
             spawnTimer = 6.0f + (customerCounter % 3) * 1.5f;
         }
 
-        // Update all active customers
+        // Update all active customers with shop reference for stock interaction
         for (auto& cust : customers) {
-            cust.Update(deltaTime);
+            cust.Update(deltaTime, shop);
         }
 
         // Remove despawned customers
@@ -152,10 +146,10 @@ int main() {
 
             // 2D HUD / UI Rendering
             // Top-Left Controls & Status Box
-            DrawRectangle(15, 15, 300, 205, { 15, 20, 25, 210 });
-            DrawRectangleLines(15, 15, 300, 205, { 70, 85, 100, 255 });
+            DrawRectangle(15, 15, 310, 215, { 15, 20, 25, 215 });
+            DrawRectangleLines(15, 15, 310, 215, { 70, 85, 100, 255 });
 
-            DrawText("SHOP SIMULATOR 3D (Tahap 3)", 25, 25, 16, { 255, 215, 0, 255 });
+            DrawText("SHOP SIMULATOR 3D (Tahap 4)", 25, 25, 16, { 255, 215, 0, 255 });
             DrawText("WASD     : Bergerak", 25, 48, 14, RAYWHITE);
             DrawText("Mouse    : Kontrol Kamera", 25, 68, 14, RAYWHITE);
             DrawText("E        : Interaksi Rak/Produk", 25, 88, 14, { 100, 230, 100, 255 });
@@ -167,14 +161,18 @@ int main() {
             DrawText(carriedText.c_str(), 25, 138, 15, carriedColor);
 
             // Customer / NPC Status Debug
-            std::string custCountText = "Customer Aktif: " + std::to_string(customers.size()) + "/" + std::to_string(maxActiveCustomers);
+            std::string custCountText = "Customer: " + std::to_string(customers.size()) + "/" + std::to_string(maxActiveCustomers);
             DrawText(custCountText.c_str(), 25, 163, 14, { 100, 220, 255, 255 });
 
             if (!customers.empty()) {
-                std::string latestCustInfo = customers.back().GetName() + " (" + customers.back().GetStateString() + ")";
-                DrawText(latestCustInfo.c_str(), 25, 183, 13, { 200, 225, 240, 255 });
+                const auto& activeCust = customers.front();
+                std::string custInfo = activeCust.GetName() + " -> " + activeCust.GetStateString();
+                if (activeCust.IsHoldingProduct()) {
+                    custInfo += " [" + activeCust.GetHeldProductName() + "]";
+                }
+                DrawText(custInfo.c_str(), 25, 185, 13, { 200, 230, 250, 255 });
             } else {
-                DrawText("Menunggu customer baru...", 25, 183, 13, { 140, 150, 160, 255 });
+                DrawText("Menunggu customer baru...", 25, 185, 13, { 140, 150, 160, 255 });
             }
 
             // Center Interaction Prompt (When player aims at rack)

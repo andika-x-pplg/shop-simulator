@@ -26,18 +26,25 @@ Game simulasi toko 3D modern berbasis C++17 dan raylib 5.0 tanpa game engine ber
   - Pesan peringatan jika rak habis, penuh, atau jenis produk tidak cocok.
 
 ## Fitur Tahap 3 (Sistem Customer / NPC Dasar)
-- **Class `Customer`**: Model humanoid 3D (kepala sphere, badan cube berkaos warna-warni, kaki beranimasi langkah kaki, dan marker status di atas kepala).
-- **Customer Lifecycle & Finite State Machine (FSM)**:
-  - `ENTERING`: Muncul di luar toko, berjalan menuju pintu masuk toko.
-  - `WALKING_TO_SHELF`: Masuk melewati pintu, berjalan di lorong toko menuju rak target.
-  - `AT_SHELF`: Berhenti di depan rak selama 3.5 - 5.5 detik untuk melihat produk.
-  - `LEAVING`: Berjalan dari rak kembali ke lorong utama menuju pintu keluar.
-  - `EXITING`: Keluar melewati pintu toko ke area luar.
-  - `DESPAWNED`: Hilang setelah mencapai titik despawn luar.
-- **Spawn Loop & Batasan**:
-  - Maksimal 3 customer aktif sekaligus di dalam/luar toko.
-  - Customer baru di-spawn secara berkala dengan variasi nama, warna pakaian, dan pemilihan rak target yang acak/berotasi.
-- **HUD Customer Tracker**: Menampilkan jumlah customer aktif (`Customer Aktif: X/3`) dan status/nama customer terkini.
+- Model humanoid 3D (kepala sphere, badan cube berkaos warna-warni, kaki beranimasi langkah kaki).
+- Sistem navigasi lorong toko tanpa menembus dinding maupun rak.
+- Batasan maksimal 3 customer aktif sekaligus dan loop spawner teratur.
+
+## Fitur Tahap 4 (Customer Memilih dan Mengambil Produk)
+- **Pemilihan Produk Cerdas (`FindAvailableRackIndex`)**:
+  - Customer otomatis memeriksa ketersediaan produk di toko.
+  - Customer **hanya memilih rak yang memiliki stok > 0**.
+  - Jika rak target habis sebelum customer sampai, customer otomatis mencari rak alternatif yang masih memiliki stok.
+  - Jika seluruh rak di toko kosong (`stok = 0`), customer tidak akan macet/stuck dan langsung berjalan keluar toko dengan tertib.
+- **Sistem Mengambil Produk & Pengurangan Stok**:
+  - Ketika customer berada di depan rak target, customer menunggu sejenak (browsing) lalu mengambil 1 unit produk.
+  - Stok rak berkurang 1 secara sinkron dengan sistem produk Tahap 2 (`stock -= 1`), dan visual barang di rak langsung berkurang.
+- **Visualisasi Customer Membawa Produk (3D NPC Held Item)**:
+  - Produk yang diambil dirender secara 3D di tangan kanan customer sesuai jenisnya (Minuman / Roti / Makanan Kaleng).
+  - Indikator status kepala berubah menjadi hijau saat customer berhasil membawa barang belanjaan.
+  - Customer membawa barang belanjaan tersebut menyusuri lorong menuju pintu keluar hingga despawn di area luar.
+- **HUD Monitoring Belanja**:
+  - Menampilkan nama customer, state aktivitas saat ini, dan nama produk yang sedang dibawa.
 
 ## Struktur Project
 ```text
@@ -46,14 +53,14 @@ shop-simulator/
 ├── README.md           # Dokumentasi project
 ├── include/            # C++ Header files
 │   ├── Common.hpp      # Struktur matematika & AABB bounding box
-│   ├── Customer.hpp    # Class Customer (FSM, waypoints, & visual NPC)
+│   ├── Customer.hpp    # Class Customer (FSM, shopping inventory & 3D NPC)
 │   ├── Player.hpp      # Controller first person, held item & feedback
 │   ├── Product.hpp     # Definisi tipe produk, dimensi & properti visual
 │   ├── Rack.hpp        # Class Rack (stok, visual items di rak & interaksi)
 │   └── Shop.hpp        # Geometri toko, layout rak, waypoint navigasi & collision
 ├── src/                # C++ Source files
-│   ├── main.cpp        # Game loop, customer spawner, input handling & HUD
-│   ├── Customer.cpp    # Navigasi waypoint NPC, update state & render 3D
+│   ├── main.cpp        # Game loop, customer spawner, shopping loop & HUD
+│   ├── Customer.cpp    # Pemilihan produk, navigasi, pengambilan stok & render barang bawaan
 │   ├── Player.cpp      # Pergerakan, first-person camera & render held item
 │   ├── Rack.cpp        # Implementasi render rak bertingkat & visual produk
 │   └── Shop.cpp        # Layout penempatan rak toko, waypoint & collider
@@ -63,7 +70,7 @@ shop-simulator/
 ## Kontrol
 - **W / A / S / D**: Bergerak maju, kiri, mundur, kanan
 - **Mouse**: Mengarahkan pandangan kamera (Pitch / Yaw)
-- **E**: Interaksi (Mengambil produk dari rak / Menaruh produk ke rak)
+- **E**: Interaksi Player (Mengambil produk dari rak / Menaruh produk ke rak)
 - **ESC**: Keluar dari game
 
 ## Cara Build & Menjalankan (Windows)

@@ -83,9 +83,27 @@ Vector3 Shop::GetRackFrontPosition(size_t rackIndex) const {
         // Right aisle racks: standing spot is inside the aisle (x = 3.2f)
         return { 3.2f, 0.0f, rackPos.z };
     } else {
-        // Center island: standing spot on front side (z = -0.5f)
+        // Center island: standing spot on front side (z = -0.6f)
         return { 0.0f, 0.0f, -0.6f };
     }
+}
+
+int Shop::FindAvailableRackIndex(int preferredStartIndex) const {
+    if (racks.empty()) return -1;
+
+    size_t count = racks.size();
+    size_t start = (preferredStartIndex >= 0) ? ((size_t)preferredStartIndex % count) : 0;
+
+    // Check starting from preferred index in loop
+    for (size_t i = 0; i < count; ++i) {
+        size_t idx = (start + i) % count;
+        if (racks[idx].HasStock()) {
+            return (int)idx;
+        }
+    }
+
+    // No racks have stock available
+    return -1;
 }
 
 std::vector<AABB> Shop::GetColliders() const {
