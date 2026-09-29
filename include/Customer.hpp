@@ -7,14 +7,17 @@
 class Shop; // Forward declaration
 
 enum class CustomerState {
-    ENTERING,          // Walking from outside spawn to shop entrance door
-    SELECTING_PRODUCT, // In shop, finding an available rack with stock > 0
-    WALKING_TO_SHELF,  // Walking through aisles to chosen rack
-    AT_SHELF,          // Standing in front of the rack, browsing/choosing
-    TAKING_PRODUCT,    // Picking up the product from rack (stock -= 1)
-    LEAVING,           // Walking back to the door from inside while carrying product
-    EXITING,           // Walking from door to outside despawn point
-    DESPAWNED          // Ready to be removed from memory
+    ENTERING,            // Walking from outside spawn to shop entrance door
+    SELECTING_PRODUCT,   // In shop, finding an available rack with stock > 0
+    WALKING_TO_SHELF,    // Walking through aisles to chosen rack
+    AT_SHELF,            // Standing in front of the rack, browsing/choosing
+    TAKING_PRODUCT,      // Picking up the product from rack (stock -= 1)
+    GOING_TO_CASHIER,    // Walking from shelf to cashier queue area
+    WAITING_FOR_CASHIER, // Standing in queue line waiting for turn
+    PAYING,              // At counter processing transaction (money paid)
+    LEAVING,             // Walking back to the door from cashier/inside
+    EXITING,             // Walking from door to outside despawn point
+    DESPAWNED            // Ready to be removed from memory
 };
 
 class Customer {
@@ -24,7 +27,7 @@ public:
     ~Customer() = default;
 
     void SetTargetRack(Vector3 rackInteractionPos, int rackId, ProductType type);
-    void Update(float deltaTime, Shop& shop);
+    void Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidPay, int& outPaidAmount, std::string& outPaidProduct);
     void Render();
 
     CustomerState GetState() const { return state; }
@@ -37,6 +40,13 @@ public:
     ProductType GetHeldProduct() const { return heldProduct; }
     std::string GetHeldProductName() const;
     bool IsHoldingProduct() const { return heldProduct != ProductType::NONE; }
+
+    bool HasPaid() const { return hasPaid; }
+    bool IsInCashierQueue() const {
+        return state == CustomerState::GOING_TO_CASHIER ||
+               state == CustomerState::WAITING_FOR_CASHIER ||
+               state == CustomerState::PAYING;
+    }
 
 private:
     int id;
@@ -59,6 +69,10 @@ private:
     float waitTimer;
     float maxWaitDuration;
 
+    // Payment timer & flag (ensures transaction triggers exactly once)
+    float payTimer;
+    bool hasPaid;
+
     // Carried product inventory (Max 1 product)
     ProductType heldProduct;
 
@@ -70,7 +84,8 @@ private:
 
     void MoveTowards(Vector3 target, float deltaTime);
     void BuildEntryWaypoints();
-    void BuildExitWaypoints();
+    void BuildExitWaypoints(Vector3 startPos);
+    void BuildPathToCashier(Vector3 queueSlot);
     bool SelectAvailableRack(Shop& shop);
     void RenderHeldProduct();
 };

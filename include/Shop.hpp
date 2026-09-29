@@ -1,6 +1,7 @@
 #pragma once
 #include "Common.hpp"
 #include "Rack.hpp"
+#include "Cashier.hpp"
 #include <vector>
 #include <memory>
 
@@ -12,19 +13,13 @@ struct Wall {
     Color color;
 };
 
-struct CounterTable {
-    Vector3 position;
-    Vector3 size;
-    Color color;
-    Color topColor;
-};
-
 class Shop {
 public:
     Shop();
     ~Shop() = default;
 
     void Init();
+    void Update(float deltaTime);
     void Render();
     
     // Colliders for physics
@@ -34,6 +29,10 @@ public:
     std::vector<Rack>& GetRacks() { return racks; }
     const std::vector<Rack>& GetRacks() const { return racks; }
 
+    // Cashier access
+    Cashier& GetCashier() { return cashier; }
+    const Cashier& GetCashier() const { return cashier; }
+
     // Find the rack player is aiming at within interaction range
     Rack* GetTargetedRack(Vector3 playerEyePos, Vector3 playerLookDir, float maxDistance = 3.5f);
 
@@ -42,7 +41,6 @@ public:
     size_t GetRackCount() const { return racks.size(); }
 
     // Customer navigation: Find a rack that has stock > 0
-    // Returns index of rack in racks vector, or -1 if no racks have stock
     int FindAvailableRackIndex(int preferredStartIndex = 0) const;
 
 private:
@@ -51,7 +49,7 @@ private:
     float shopHeight;
 
     std::vector<Wall> walls;
-    std::vector<CounterTable> counterTables;
+    Cashier cashier;
     std::vector<Rack> racks;
 
     void BuildStructure();

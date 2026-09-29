@@ -1,18 +1,23 @@
 #include "Shop.hpp"
 
 Shop::Shop()
-    : shopWidth(20.0f), shopLength(24.0f), shopHeight(5.0f)
+    : shopWidth(20.0f), shopLength(24.0f), shopHeight(5.0f),
+      cashier({ 5.5f, 0.6f, 8.5f }, { 3.5f, 1.2f, 1.6f })
 {
 }
 
 void Shop::Init() {
     BuildStructure();
     BuildRacks();
+    cashier.Init();
+}
+
+void Shop::Update(float deltaTime) {
+    cashier.Update(deltaTime);
 }
 
 void Shop::BuildStructure() {
     walls.clear();
-    counterTables.clear();
 
     float halfW = shopWidth / 2.0f;
     float halfL = shopLength / 2.0f;
@@ -41,9 +46,6 @@ void Shop::BuildStructure() {
     walls.push_back({ { rightWallX, shopHeight / 2.0f, halfL }, { sideWallWidth, shopHeight, wallThickness }, wallColor });
     // Top Door Frame
     walls.push_back({ { 0.0f, shopHeight - 0.6f, halfL }, { 4.0f, 1.2f, wallThickness }, { 100, 110, 120, 255 } });
-
-    // Counter table near entrance (decorative shop counter)
-    counterTables.push_back({ { 5.5f, 0.6f, 8.5f }, { 3.5f, 1.2f, 1.6f }, { 70, 75, 80, 255 }, { 90, 95, 100, 255 } });
 }
 
 void Shop::BuildRacks() {
@@ -65,7 +67,8 @@ void Shop::BuildRacks() {
                        Color{ 130, 90, 90, 255 }, Color{ 170, 120, 120, 255 });
 
     // Rack 4: Center Island Display Table -> Minuman promo (initial stock = 6)
-    racks.emplace_back(4, Vector3{ 0.0f, 0.7f, -3.0f }, Vector3{ 3.0f, 1.4f, 4.0f },
+    // Shifted slightly deeper (Z = -6.5f) to give a wide, open walkway in front (Z = -0.5 to Z = 8.5)
+    racks.emplace_back(4, Vector3{ 0.0f, 0.7f, -6.5f }, Vector3{ 3.0f, 1.4f, 4.0f },
                        ProductType::BEVERAGE, 6, 15,
                        Color{ 60, 100, 140, 255 }, Color{ 90, 140, 190, 255 });
 }
@@ -83,8 +86,8 @@ Vector3 Shop::GetRackFrontPosition(size_t rackIndex) const {
         // Right aisle racks: standing spot is inside the aisle (x = 3.2f)
         return { 3.2f, 0.0f, rackPos.z };
     } else {
-        // Center island: standing spot on front side (z = -0.6f)
-        return { 0.0f, 0.0f, -0.6f };
+        // Center island: standing spot clearly in front of the island table (z = -3.6f)
+        return { 0.0f, 0.0f, -3.6f };
     }
 }
 
@@ -117,13 +120,8 @@ std::vector<AABB> Shop::GetColliders() const {
         colliders.push_back(box);
     }
 
-    // Counter table colliders
-    for (const auto& c : counterTables) {
-        AABB box;
-        box.min = { c.position.x - c.size.x / 2.0f, 0.0f, c.position.z - c.size.z / 2.0f };
-        box.max = { c.position.x + c.size.x / 2.0f, c.position.y + c.size.y / 2.0f, c.position.z + c.size.z / 2.0f };
-        colliders.push_back(box);
-    }
+    // Cashier counter collider
+    colliders.push_back(cashier.GetCollider());
 
     // Rack colliders
     for (const auto& r : racks) {
@@ -169,13 +167,8 @@ void Shop::Render() {
     DrawCube({ -2.0f, 1.8f, shopLength / 2.0f }, 0.2f, 3.6f, 0.6f, { 80, 85, 90, 255 });
     DrawCube({ 2.0f, 1.8f, shopLength / 2.0f }, 0.2f, 3.6f, 0.6f, { 80, 85, 90, 255 });
 
-    // Render Counter Tables
-    for (const auto& c : counterTables) {
-        DrawCube(c.position, c.size.x, c.size.y, c.size.z, c.color);
-        DrawCubeWires(c.position, c.size.x, c.size.y, c.size.z, { 40, 40, 45, 255 });
-        Vector3 topPos = { c.position.x, c.position.y + c.size.y / 2.0f - 0.05f, c.position.z };
-        DrawCube(topPos, c.size.x + 0.1f, 0.1f, c.size.z + 0.1f, c.topColor);
-    }
+    // Render Cashier Counter & POS System
+    cashier.Render();
 
     // Render all Racks and their visual products
     for (auto& r : racks) {

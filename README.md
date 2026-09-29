@@ -11,9 +11,9 @@ Game simulasi toko 3D modern berbasis C++17 dan raylib 5.0 tanpa game engine ber
 ## Fitur Tahap 2 (Sistem Rak, Produk, Stok & Interaksi)
 - **Sistem Rak (Class `Rack`)**: Rak 3D bertingkat dengan papan penanda kategori produk dan collider AABB.
 - **Sistem Produk (Header `Product.hpp`)**:
-  - **Minuman**: Botol kaleng soda biru-silver (Stok awal: 10).
-  - **Roti**: Balok roti emas keemasan (Stok awal: 8).
-  - **Makanan Kaleng**: Kaleng makanan merah-silver (Stok awal: 12).
+  - **Minuman**: Botol kaleng soda biru-silver (Stok awal: 10, Harga: Rp5.000).
+  - **Roti**: Balok roti emas keemasan (Stok awal: 8, Harga: Rp8.000).
+  - **Makanan Kaleng**: Kaleng makanan merah-silver (Stok awal: 12, Harga: Rp12.000).
 - **Tampilan Visual Produk di Rak**: Menampilkan barisan item 3D di atas rak yang menyesuaikan dengan jumlah stok yang tersedia.
 - **Interaksi Tombol `E`**:
   - Deteksi arah pandang dan jarak interaksi (<= 3.5m) ke rak produk.
@@ -31,20 +31,32 @@ Game simulasi toko 3D modern berbasis C++17 dan raylib 5.0 tanpa game engine ber
 - Batasan maksimal 3 customer aktif sekaligus dan loop spawner teratur.
 
 ## Fitur Tahap 4 (Customer Memilih dan Mengambil Produk)
-- **Pemilihan Produk Cerdas (`FindAvailableRackIndex`)**:
-  - Customer otomatis memeriksa ketersediaan produk di toko.
-  - Customer **hanya memilih rak yang memiliki stok > 0**.
-  - Jika rak target habis sebelum customer sampai, customer otomatis mencari rak alternatif yang masih memiliki stok.
-  - Jika seluruh rak di toko kosong (`stok = 0`), customer tidak akan macet/stuck dan langsung berjalan keluar toko dengan tertib.
-- **Sistem Mengambil Produk & Pengurangan Stok**:
-  - Ketika customer berada di depan rak target, customer menunggu sejenak (browsing) lalu mengambil 1 unit produk.
-  - Stok rak berkurang 1 secara sinkron dengan sistem produk Tahap 2 (`stock -= 1`), dan visual barang di rak langsung berkurang.
-- **Visualisasi Customer Membawa Produk (3D NPC Held Item)**:
-  - Produk yang diambil dirender secara 3D di tangan kanan customer sesuai jenisnya (Minuman / Roti / Makanan Kaleng).
-  - Indikator status kepala berubah menjadi hijau saat customer berhasil membawa barang belanjaan.
-  - Customer membawa barang belanjaan tersebut menyusuri lorong menuju pintu keluar hingga despawn di area luar.
-- **HUD Monitoring Belanja**:
-  - Menampilkan nama customer, state aktivitas saat ini, dan nama produk yang sedang dibawa.
+- Customer memeriksa stok produk di toko dan hanya memilih rak dengan stok > 0.
+- Customer mengambil 1 unit produk, mengurangi stok rak secara sinkron, dan membawa produk 3D di tangan kanan.
+
+## Fitur Tahap 5 & Perbaikan (Sistem Kasir, NPC Kasir, Transaksi, dan Pembayaran)
+- **Sistem Harga Produk**:
+  - Minuman: Rp5.000
+  - Roti: Rp8.000
+  - Makanan Kaleng: Rp12.000
+- **NPC Kasir Khusus (Dedicated Cashier NPC)**:
+  - Berdiri tetap di belakang meja kasir menghadap ke area antrean customer.
+  - Tampilan visual eksklusif: Seragam biru tua (*Navy Blue Store Uniform*), celemek merah (*Red Apron*), topi visor toko (*Cap*), tangan yang bersiap di meja kasir, animasi pernapasan/idle halus, serta badge marker biru cyan di atas kepala bertuliskan status peran kasir.
+  - Posisi solid dan tidak menghalangi jalur keluar/masuk customer maupun pergerakan pemain.
+- **Objek Meja Kasir & POS Machine 3D (Class `Cashier`)**:
+  - Meja counter pembayaran dengan mesin POS register, layar monitor hijau menyala, papan tanda `KASIR`, serta collider AABB fisik.
+- **Sistem Antrean Kasir (`Customer Queue`)**:
+  - Slot 0: Posisi bayar di depan monitor kasir & NPC Kasir.
+  - Slot 1-2: Posisi mengantre di belakang. Customer otomatis maju saat antrean di depan kosong.
+- **Sistem Transaksi & Saldo Toko (`Shop Treasury`)**:
+  - Saldo awal toko: **Rp100.000**.
+  - Customer membayar di depan NPC Kasir (1.5 detik proses di POS register).
+  - Transaksi diproteksi flag `hasPaid` sehingga **hanya terjadi tepat 1 kali per customer**.
+  - Uang hasil penjualan langsung ditambahkan ke saldo toko (`shopMoney += price`).
+- **Banner Notifikasi Pembayaran**:
+  - Banner hijau di bagian atas layar menampilkan informasi sukses: `"Pembayaran Berhasil! [Nama] membeli [Produk] (+Rp[Harga])"`.
+- **Informasi Kasir**:
+  - HUD menampilkan saldo uang toko secara realtime (`Uang Toko: RpXXXXX`), jumlah antrean kasir, serta info prompt ketika pemain mendekati area kasir.
 
 ## Struktur Project
 ```text
@@ -52,18 +64,20 @@ shop-simulator/
 ├── CMakeLists.txt      # Build configuration via CMake & FetchContent raylib
 ├── README.md           # Dokumentasi project
 ├── include/            # C++ Header files
+│   ├── Cashier.hpp     # Class Cashier (counter 3D, NPC kasir, POS terminal, antrian, & transaksi)
 │   ├── Common.hpp      # Struktur matematika & AABB bounding box
-│   ├── Customer.hpp    # Class Customer (FSM, shopping inventory & 3D NPC)
+│   ├── Customer.hpp    # Class Customer (FSM, shopping, cashier queue & payment)
 │   ├── Player.hpp      # Controller first person, held item & feedback
-│   ├── Product.hpp     # Definisi tipe produk, dimensi & properti visual
+│   ├── Product.hpp     # Definisi produk, dimensi visual, dan harga Rupiah
 │   ├── Rack.hpp        # Class Rack (stok, visual items di rak & interaksi)
-│   └── Shop.hpp        # Geometri toko, layout rak, waypoint navigasi & collision
+│   └── Shop.hpp        # Geometri toko, layout rak, kasir & collision list
 ├── src/                # C++ Source files
-│   ├── main.cpp        # Game loop, customer spawner, shopping loop & HUD
-│   ├── Customer.cpp    # Pemilihan produk, navigasi, pengambilan stok & render barang bawaan
+│   ├── Cashier.cpp     # Render kasir 3D, NPC kasir berseragam, mesin register & pembayaran
+│   ├── Customer.cpp    # Navigasi lorong, antrean kasir, checkout & status tag
 │   ├── Player.cpp      # Pergerakan, first-person camera & render held item
 │   ├── Rack.cpp        # Implementasi render rak bertingkat & visual produk
-│   └── Shop.cpp        # Layout penempatan rak toko, waypoint & collider
+│   ├── Shop.cpp        # Layout toko, penempatan rak, kasir, waypoint & collider
+│   └── main.cpp        # Game loop, saldo toko, antrean kasir, notifikasi & HUD
 └── assets/             # Direktori aset (models, textures, sounds, fonts)
 ```
 

@@ -2,6 +2,7 @@
 #include "Player.hpp"
 #include "Shop.hpp"
 #include "Customer.hpp"
+#include "Cashier.hpp"
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -12,7 +13,7 @@ int main() {
     const int screenHeight = 720;
     
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
-    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Tahap 4: Customer Shopping System");
+    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Tahap 5: Cashier & Economy System");
 
     SetTargetFPS(60);
 
@@ -27,7 +28,14 @@ int main() {
     // Spawn player in front of shop entrance
     player.Init({ 0.0f, 0.0f, 10.0f });
 
-    // 3. Customer NPC System Management
+    // 3. Economy & Shop Treasury (Saldo Awal: Rp100.000)
+    int shopMoney = 100000;
+
+    // Transaction Notification Banner
+    std::string transactionNotice = "";
+    float transactionNoticeTimer = 0.0f;
+
+    // 4. Customer NPC System Management
     std::vector<Customer> customers;
     const size_t maxActiveCustomers = 3;
     float spawnTimer = 2.0f; // First customer arrives in 2 seconds
@@ -50,7 +58,7 @@ int main() {
         { 180, 135, 100, 255 }
     };
 
-    // 4. Main Game Loop
+    // 5. Main Game Loop
     while (!WindowShouldClose()) {
         // Exit on ESC
         if (IsKeyPressed(KEY_ESCAPE)) {
@@ -59,8 +67,17 @@ int main() {
 
         float deltaTime = GetFrameTime();
 
+        // Update Transaction Notice Timer
+        if (transactionNoticeTimer > 0.0f) {
+            transactionNoticeTimer -= deltaTime;
+            if (transactionNoticeTimer <= 0.0f) {
+                transactionNotice = "";
+            }
+        }
+
         // Update Game Logic
         player.Update(deltaTime, shop.GetColliders());
+        shop.Update(deltaTime);
 
         // Check Interaction Target (Look ray to Rack within 3.5m)
         Rack* targetedRack = shop.GetTargetedRack(player.GetEyePosition(), player.GetLookDirection(), 3.5f);
@@ -117,10 +134,28 @@ int main() {
             spawnTimer = 6.0f + (customerCounter % 3) * 1.5f;
         }
 
-        // Update all active customers with shop reference for stock interaction
+        // Count and assign queue indexes for customers heading to or at the cashier
+        int cashierQueueCount = 0;
         for (auto& cust : customers) {
-            cust.Update(deltaTime, shop);
+            int qIndex = -1;
+            if (cust.IsInCashierQueue()) {
+                qIndex = cashierQueueCount;
+                cashierQueueCount++;
+            }
+
+            bool didPay = false;
+            int paidAmount = 0;
+            std::string paidProduct = "";
+
+            cust.Update(deltaTime, shop, qIndex, didPay, paidAmount, paidProduct);
+
+            if (didPay && paidAmount > 0) {
+                shopMoney += paidAmount;
+                transactionNotice = "Pembayaran Berhasil! " + cust.GetName() + " membeli " + paidProduct + " (+Rp" + std::to_string(paidAmount) + ")";
+                transactionNoticeTimer = 3.5f;
+            }
         }
+        shop.GetCashier().SetQueueCount(cashierQueueCount);
 
         // Remove despawned customers
         for (auto it = customers.begin(); it != customers.end();) {
@@ -130,6 +165,10 @@ int main() {
                 ++it;
             }
         }
+
+        // Check if player is close to the Cashier Counter (Informative HUD prompt)
+        float distToCashier = Vector3Distance(player.GetPosition(), shop.GetCashier().GetPosition());
+        bool playerNearCashier = (distToCashier < 3.8f);
 
         // Render Frame
         BeginDrawing();
@@ -146,10 +185,10 @@ int main() {
 
             // 2D HUD / UI Rendering
             // Top-Left Controls & Status Box
-            DrawRectangle(15, 15, 310, 215, { 15, 20, 25, 215 });
-            DrawRectangleLines(15, 15, 310, 215, { 70, 85, 100, 255 });
+            DrawRectangle(15, 15, 320, 240, { 15, 20, 25, 220 });
+            DrawRectangleLines(15, 15, 320, 240, { 70, 85, 100, 255 });
 
-            DrawText("SHOP SIMULATOR 3D (Tahap 4)", 25, 25, 16, { 255, 215, 0, 255 });
+            DrawText("SHOP SIMULATOR 3D (Tahap 5)", 25, 25, 16, { 255, 215, 0, 255 });
             DrawText("WASD     : Bergerak", 25, 48, 14, RAYWHITE);
             DrawText("Mouse    : Kontrol Kamera", 25, 68, 14, RAYWHITE);
             DrawText("E        : Interaksi Rak/Produk", 25, 88, 14, { 100, 230, 100, 255 });
@@ -160,19 +199,21 @@ int main() {
             Color carriedColor = player.IsHoldingProduct() ? Color{ 255, 220, 50, 255 } : Color{ 180, 190, 200, 255 };
             DrawText(carriedText.c_str(), 25, 138, 15, carriedColor);
 
-            // Customer / NPC Status Debug
-            std::string custCountText = "Customer: " + std::to_string(customers.size()) + "/" + std::to_string(maxActiveCustomers);
-            DrawText(custCountText.c_str(), 25, 163, 14, { 100, 220, 255, 255 });
+            // Treasury / Money Balance
+            std::string moneyText = "Uang Toko: Rp" + std::to_string(shopMoney);
+            DrawText(moneyText.c_str(), 25, 165, 16, { 50, 255, 120, 255 });
+
+            // Customer / Cashier Status Debug
+            std::string custCountText = "Customer: " + std::to_string(customers.size()) + "/" + std::to_string(maxActiveCustomers) +
+                                        " | Antrian Kasir: " + std::to_string(cashierQueueCount);
+            DrawText(custCountText.c_str(), 25, 192, 13, { 100, 220, 255, 255 });
 
             if (!customers.empty()) {
                 const auto& activeCust = customers.front();
                 std::string custInfo = activeCust.GetName() + " -> " + activeCust.GetStateString();
-                if (activeCust.IsHoldingProduct()) {
-                    custInfo += " [" + activeCust.GetHeldProductName() + "]";
-                }
-                DrawText(custInfo.c_str(), 25, 185, 13, { 200, 230, 250, 255 });
+                DrawText(custInfo.c_str(), 25, 212, 12, { 200, 230, 250, 255 });
             } else {
-                DrawText("Menunggu customer baru...", 25, 185, 13, { 140, 150, 160, 255 });
+                DrawText("Menunggu customer baru...", 25, 212, 12, { 140, 150, 160, 255 });
             }
 
             // Center Interaction Prompt (When player aims at rack)
@@ -184,7 +225,8 @@ int main() {
                 if (!player.IsHoldingProduct()) {
                     if (targetedRack->HasStock()) {
                         promptText = "Tekan E untuk mengambil " + targetedRack->GetProductName() + 
-                                     " (Stok: " + std::to_string(targetedRack->GetStock()) + ")";
+                                     " (Stok: " + std::to_string(targetedRack->GetStock()) + 
+                                     " | Rp" + std::to_string(GetProductInfo(targetedRack->GetProductType()).price) + ")";
                         promptTextColor = { 100, 255, 100, 255 };
                     } else {
                         promptText = "[Stok " + targetedRack->GetProductName() + " Kosong]";
@@ -215,6 +257,26 @@ int main() {
                     DrawRectangleLines(boxX, boxY, textWidth + 40, 36, promptTextColor);
                     DrawText(promptText.c_str(), boxX + 20, boxY + 10, 16, promptTextColor);
                 }
+            } else if (playerNearCashier) {
+                // Info prompt when player approaches cashier counter
+                std::string cashierInfo = "Meja Kasir Toko";
+                int textWidth = MeasureText(cashierInfo.c_str(), 16);
+                int boxX = (screenWidth - textWidth) / 2 - 15;
+                int boxY = screenHeight / 2 + 50;
+                DrawRectangle(boxX, boxY, textWidth + 30, 32, { 20, 25, 30, 200 });
+                DrawRectangleLines(boxX, boxY, textWidth + 30, 32, { 100, 180, 255, 255 });
+                DrawText(cashierInfo.c_str(), boxX + 15, boxY + 8, 16, { 150, 210, 255, 255 });
+            }
+
+            // Successful Transaction Notification Banner (Center Top)
+            if (transactionNoticeTimer > 0.0f) {
+                int noticeWidth = MeasureText(transactionNotice.c_str(), 18);
+                int nBoxX = (screenWidth - noticeWidth) / 2 - 25;
+                int nBoxY = 25;
+
+                DrawRectangle(nBoxX, nBoxY, noticeWidth + 50, 42, { 20, 120, 50, 230 });
+                DrawRectangleLines(nBoxX, nBoxY, noticeWidth + 50, 42, { 100, 255, 150, 255 });
+                DrawText(transactionNotice.c_str(), nBoxX + 25, nBoxY + 12, 18, RAYWHITE);
             }
 
             // Temporary Warning / Notification Banner
@@ -242,7 +304,7 @@ int main() {
         EndDrawing();
     }
 
-    // 5. Cleanup
+    // 6. Cleanup
     CloseWindow();
 
     return 0;
