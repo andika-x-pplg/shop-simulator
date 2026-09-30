@@ -24,6 +24,11 @@ public:
 
     // Reset daily counters when starting next day
     void ResetDaily();
+    void LoadDailyStats(int rev, int exp, int cust) {
+        dailyRevenue = rev;
+        dailyExpenses = exp;
+        dailyCustomers = cust;
+    }
 
     // Getters
     int GetDailyRevenue() const { return dailyRevenue; }

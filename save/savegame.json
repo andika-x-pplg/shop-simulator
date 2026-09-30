@@ -1,0 +1,62 @@
+{
+  "saveVersion": 1,
+  "player": {
+    "posX": 8.63288,
+    "posY": 0,
+    "posZ": -1.5217
+  },
+  "time": {
+    "day": 1,
+    "hour": 10,
+    "minute": 30,
+    "isShopOpen": true
+  },
+  "economy": {
+    "currentBalance": 141000,
+    "totalRevenue": 121000,
+    "totalExpenses": 80000
+  },
+  "dailyStats": {
+    "revenue": 121000,
+    "expenses": 80000,
+    "customers": 17
+  },
+  "reputation": {
+    "reputation": 100,
+    "totalRatings": 17,
+    "totalRatingPoints": 85
+  },
+  "stocks": {
+    "rackBeverage": 0,
+    "rackBread": 0,
+    "rackCannedFood": 0,
+    "storageBeverage": 1,
+    "storageBread": 0,
+    "storageCannedFood": 0
+  },
+  "prices": {
+    "beverage": 5000,
+    "bread": 8000,
+    "cannedFood": 12000
+  },
+  "upgrades": {
+    "shopSize": 2,
+    "shelfCap": 1,
+    "storageCap": 1,
+    "customerCap": 1
+  },
+  "furniture": {
+    "table": false,
+    "chair": false,
+    "displayShelf": false,
+    "cabinet": false,
+    "plant": false
+  },
+  "equipment": {
+    "betterDisplay": false,
+    "extraStorage": false,
+    "betterCashier": false
+  },
+  "activeOrders": [
+  ]
+}

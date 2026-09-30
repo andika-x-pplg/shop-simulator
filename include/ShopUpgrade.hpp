@@ -32,6 +32,7 @@ public:
 
     // Queries
     int GetLevel(UpgradeType type) const;
+    void SetLevel(UpgradeType type, int lvl);
     int GetMaxLevel(UpgradeType type) const;
     bool IsMaxLevel(UpgradeType type) const;
     int GetNextUpgradeCost(UpgradeType type) const;

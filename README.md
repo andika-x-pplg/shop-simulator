@@ -249,6 +249,39 @@ Game simulasi toko 3D modern berbasis C++17 dan raylib 5.0 tanpa game engine ber
 - **Aktivitas Toko Saat CLOSED**:
   - Pemain tetap leluasa bergerak, melakukan restock rak dari storage, memesan barang di supplier (timer delivery tetap berjalan normal), mengatur harga jual, serta membeli furniture/upgrade.
 
+## Fitur Tahap 11 (Sistem Save / Load Game & New Game)
+- **Sistem Penyimpanan Progres Lokal (`SaveSystem.hpp`, `SaveSystem.cpp`)**:
+  - Format penyimpanan: Format file **JSON terstruktur** (`save/savegame.json`) tanpa dependency berat luar (native C++ filesystem & parsing aman).
+  - Folder penyimpanan otomatis dibuat jika belum tersedia (`save/`).
+- **Data yang Disimpan Secara Komprehensif**:
+  - **Player**: Koordinat posisi pemain (`posX, posY, posZ`).
+  - **Time & Day**: `currentDay`, `currentHour`, `currentMinute`, dan status `isShopOpen`.
+  - **Ekonomi & Keuangan**: Saldo toko (`currentBalance`), `totalRevenue`, `totalExpenses`, dan audit keuntungan.
+  - **Statistik Harian**: `dailyRevenue`, `dailyExpenses`, dan `dailyCustomers`.
+  - **Reputasi & Rating**: Skor reputasi toko (`0 - 100`), `totalRatings`, dan `totalRatingPoints`.
+  - **Stok Produk**: Stok rak (`Minuman, Roti, Makanan Kaleng`) dan stok gudang/storage.
+  - **Manajemen Harga**: Harga jual dinamis untuk masing-masing jenis produk.
+  - **Upgrade Toko**: Level `Shop Size` (1-3), `Shelf Capacity` (1-3), `Storage Capacity` (1-3), dan `Customer Capacity` (1-3).
+  - **Furniture & Equipment**: Status kepemilikan (`table, chair, displayShelf, cabinet, plant, betterDisplay, extraStorage, betterCashier`).
+  - **Pengadaan Supplier**: Daftar order pengiriman yang sedang berjalan beserta sisa timer delivery.
+- **Sistem Menu & Kontrol (Game Menu)**:
+  - **Menu Game Modal (Tombol `M` atau `ESC` saat bermain)**:
+    - `[1] Lanjutkan Game (Continue)`: Menutup menu dan kembali bermain.
+    - `[2] Simpan Game (Save Game)`: Menyimpan kondisi permainan saat ini ke Save Slot 1.
+    - `[3] Muat Game (Load Game)`: Memuat kembali seluruh kondisi dari file save.
+    - `[4] Permainan Baru (New Game)`: Mengembalikan seluruh kondisi permainan ke awal tanpa menghapus file save.
+    - `[5] Keluar Game (Exit)`: Keluar dari aplikasi permainan.
+  - **Shortcut Tombol Praktis**:
+    - **F5**: *Quick Save* langsung tanpa membuka menu.
+    - **F9**: *Quick Load* langsung dari file save.
+- **Autosave Sederhana & Aman**:
+  - Otomatis melakukan penyimpanan saat toko tutup (pukul 21:00) dan saat memulai hari baru (pukul 08:00).
+- **Validasi Data & Error Handling**:
+  - Pengecekan versi save (`saveVersion: 1`).
+  - Validasi batas nilai (*clamping*) untuk mencegah corrupt data.
+  - Penanganan file tidak ditemukan / slot kosong tanpa menyebabkan crash.
+  - Reset aman customer aktif saat Load guna mencegah duplikasi transaksi atau customer berstatus rusak.
+
 ## Struktur Project
 ```text
 shop-simulator/
@@ -267,6 +300,7 @@ shop-simulator/
 │   ├── Product.hpp     # Definisi produk, harga jual, harga beli supplier, & visual
 │   ├── Rack.hpp        # Class Rack (stok rak, kapasitas maks, visual items di rak & interaksi)
 │   ├── Reputation.hpp  # Sistem reputasi toko, rata-rata rating, konversi bintang & ulasan customer
+│   ├── SaveSystem.hpp  # Sistem Save/Load game, serialisasi JSON, validasi & Game Menu
 │   ├── Shop.hpp        # Geometri toko, dynamic size level, layout rak, kasir & collision list
 │   ├── ShopUpgrade.hpp # Sistem upgrade toko berlevel (size, shelf, storage, customer capacity)
 │   ├── Storage.hpp     # Class Storage (pallet kayu 3D, kapasitas dinamis & stok gudang)
@@ -282,11 +316,12 @@ shop-simulator/
 │   ├── PriceManager.cpp# Penyesuaian harga jual, validasi batas & kalkulasi margin
 │   ├── Rack.cpp        # Implementasi render rak bertingkat, batas kapasitas dinamis & visual produk
 │   ├── Reputation.cpp  # Kalkulasi rata-rata rating, penyesuaian reputasi toko & riwayat ulasan
+│   ├── SaveSystem.cpp  # Serialisasi/deserialisasi savegame.json, validasi & Game Menu UI
 │   ├── Shop.cpp        # Dynamic shop expansion, penempatan rak, kasir, storage, waypoint & collider
 │   ├── ShopUpgrade.cpp # Logika upgrade toko, validasi balance, & modal UI upgrade
 │   ├── Storage.cpp     # Render pallet gudang 3D, kapasitas maksimum & manajemen stok gudang
 │   ├── Supplier.cpp    # Pengadaan barang, countdown delivery & transfer stok otomatis ke gudang
-│   └── main.cpp        # Game loop, integrasi waktu, jam buka/tutup, modal UI (U/B/TAB/P/F/R/Summary), & HUD
+│   └── main.cpp        # Game loop, integrasi save/load, modal UI (Save/U/B/TAB/P/F/R/Summary), & HUD
 └── assets/             # Direktori aset (models, textures, sounds, fonts)
 ```
 
@@ -294,14 +329,15 @@ shop-simulator/
 - **W / A / S / D**: Bergerak maju, kiri, mundur, kanan
 - **Mouse**: Mengarahkan pandangan kamera (Pitch / Yaw)
 - **E**: Interaksi Player (Ambil dari storage / Restock ke rak / Taruh kembali ke storage)
+- **M / ESC**: Buka Menu Game (Save, Load, New Game, Continue, Exit) / Tutup Menu Aktif
+- **F5 / F9**: Quick Save / Quick Load
 - **U**: Buka / Tutup Menu Upgrade Toko (Shop Size, Shelf, Storage, Customer)
 - **B**: Buka / Tutup Menu Beli Furniture & Peralatan (Shop Catalog)
 - **TAB**: Buka / Tutup Menu Pengadaan Barang Supplier
 - **P**: Buka / Tutup Menu Manajemen Harga Jual
 - **F**: Buka / Tutup Menu Ringkasan Keuangan Toko
 - **R**: Buka / Tutup Menu Reputasi & Rating Toko
-- **ENTER / SPASI**: Memulai Hari Berikutnya (di Daily Summary) / Beli Item / Konfirmasi Order
-- **ESC**: Tutup Menu Aktif / Keluar dari game
+- **ENTER / SPASI**: Konfirmasi Menu / Memulai Hari Berikutnya (di Daily Summary)
 
 ## Cara Build & Menjalankan (Windows)
 

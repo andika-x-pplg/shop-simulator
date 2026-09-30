@@ -27,6 +27,11 @@ public:
     int GetTotalRatingPoints() const { return totalRatingPoints; }
     float GetAverageRating() const;
     bool HasRatings() const { return totalRatings > 0; }
+    void LoadReputationData(int rep, int ratings, int ratingPoints) {
+        reputation = rep;
+        totalRatings = ratings;
+        totalRatingPoints = ratingPoints;
+    }
 
     // Catat Rating baru dari customer (dijamin dipanggil tepat 1 kali per customer)
     void RecordRating(int customerId, const std::string& customerName, int satisfaction, const std::string& productName, bool didBuy, int& outStars, std::string& outFeedback);

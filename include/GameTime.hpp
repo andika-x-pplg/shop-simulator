@@ -32,6 +32,17 @@ public:
 
     // Day lifecycle
     void StartNextDay(std::string& outNotification, Color& outNoticeColor);
+    void LoadTimeData(int day, int hour, int minute, bool shopOpen) {
+        currentDay = day;
+        currentHour = hour;
+        currentMinute = minute;
+        isShopOpen = shopOpen;
+        secondAccumulator = 0.0f;
+        showDailySummary = false;
+        warned1Hour = (currentHour > 20 || (currentHour == 20 && currentMinute > 0));
+        warnedClosingSoon = (currentHour > 20 || (currentHour == 20 && currentMinute >= 30));
+        notifiedClosed = (currentHour >= 21);
+    }
 
 private:
     int currentDay;

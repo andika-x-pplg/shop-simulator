@@ -23,6 +23,7 @@ public:
     std::string GetProductName() const;
     int GetStock() const { return currentStock; }
     int GetMaxStock() const { return maxStock; }
+    void SetStock(int stock) { currentStock = std::max(0, std::min(stock, maxStock)); }
     void SetMaxStock(int newMax) { if (newMax > 0) maxStock = newMax; }
     bool HasStock() const { return currentStock > 0; }
     bool IsFull() const { return currentStock >= maxStock; }

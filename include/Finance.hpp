@@ -24,6 +24,11 @@ public:
     // Total Revenue & Expenses
     int GetTotalRevenue() const { return totalRevenue; }
     int GetTotalExpenses() const { return totalExpenses; }
+    void LoadFinancialData(int balance, int revenue, int expenses) {
+        currentBalance = balance;
+        totalRevenue = revenue;
+        totalExpenses = expenses;
+    }
 
     // Keuntungan / Kerugian: Profit = totalRevenue - totalExpenses
     int GetTotalProfit() const { return totalRevenue - totalExpenses; }

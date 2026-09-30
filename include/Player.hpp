@@ -15,6 +15,11 @@ public:
     
     Camera3D GetCamera() const { return camera; }
     Vector3 GetPosition() const { return position; }
+    void SetPosition(Vector3 newPos) {
+        position = newPos;
+        camera.position = { position.x, position.y + eyeHeight, position.z };
+        camera.target = { position.x + cosf(pitch) * cosf(yaw), position.y + eyeHeight + sinf(pitch), position.z + cosf(pitch) * sinf(yaw) };
+    }
     Vector3 GetEyePosition() const;
     Vector3 GetLookDirection() const;
 

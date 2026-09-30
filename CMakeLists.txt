@@ -37,6 +37,7 @@ set(SOURCES
     src/Furniture.cpp
     src/GameTime.cpp
     src/DailyStats.cpp
+    src/SaveSystem.cpp
 )
 
 # Header files for IDE navigation
@@ -57,6 +58,7 @@ set(HEADERS
     include/Furniture.hpp
     include/GameTime.hpp
     include/DailyStats.hpp
+    include/SaveSystem.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

@@ -25,6 +25,7 @@ public:
 
     // Stock Management
     int GetStock(ProductType type) const;
+    void SetStock(ProductType type, int amount) { if (type != ProductType::NONE) storageStocks[type] = std::max(0, std::min(amount, maxStorageCapacity)); }
     void AddStock(ProductType type, int amount);
     bool TakeStock(ProductType type);
 

@@ -35,6 +35,9 @@ public:
     // Active Orders & Delivery Queries
     const std::vector<SupplierOrder>& GetActiveOrders() const { return activeOrders; }
     bool HasActiveOrders() const { return !activeOrders.empty(); }
+    void LoadActiveOrders(const std::vector<SupplierOrder>& orders) {
+        activeOrders = orders;
+    }
 
     // UI Menu State
     bool IsMenuOpen() const { return menuOpen; }

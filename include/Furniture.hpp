@@ -57,6 +57,16 @@ public:
     const std::vector<EquipmentItem>& GetEquipmentList() const { return equipmentList; }
     bool IsFurnitureOwned(FurnitureType type) const;
     bool IsEquipmentOwned(EquipmentType type) const;
+    void SetFurnitureOwned(FurnitureType type, bool owned) {
+        for (auto& item : furnitureList) {
+            if (item.type == type) { item.isOwned = owned; }
+        }
+    }
+    void SetEquipmentOwned(EquipmentType type, bool owned) {
+        for (auto& item : equipmentList) {
+            if (item.type == type) { item.isOwned = owned; }
+        }
+    }
 
     // Equipment bonus queries
     int GetEquipmentShelfBonus() const;     // +2 per rack jika memiliki BETTER_DISPLAY

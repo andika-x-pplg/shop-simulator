@@ -69,6 +69,13 @@ int ShopUpgrade::GetLevel(UpgradeType type) const {
     return 1;
 }
 
+void ShopUpgrade::SetLevel(UpgradeType type, int lvl) {
+    size_t idx = static_cast<size_t>(type);
+    if (idx < upgrades.size()) {
+        upgrades[idx].currentLevel = std::max(1, std::min(lvl, upgrades[idx].maxLevel));
+    }
+}
+
 int ShopUpgrade::GetMaxLevel(UpgradeType type) const {
     size_t idx = static_cast<size_t>(type);
     if (idx < upgrades.size()) {
