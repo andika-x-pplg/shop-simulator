@@ -851,8 +851,16 @@ int main() {
             audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
         }
 
-        // Update Employee Manager (Stage 16: Idle / visuals / positioning)
-        employeeMgr.Update(deltaTime, shop);
+        // Update Employee Manager (Stage 17: Full Automation - Cashier, Stocker, Cleaner)
+        std::string empNotice = "";
+        Color empNoticeColor = RAYWHITE;
+        employeeMgr.Update(deltaTime, shop, customers, gameTime.IsShopOpen(), empNotice, empNoticeColor);
+        if (!empNotice.empty()) {
+            topNotice = empNotice;
+            topNoticeColor = empNoticeColor;
+            topNoticeTimer = 3.5f;
+            audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
+        }
 
         // Check Interaction Targets (Look ray to Rack, Storage Pallets, or Employees within 3.5m)
         Rack* targetedRack = shop.GetTargetedRack(player.GetEyePosition(), player.GetLookDirection(), 3.5f);
@@ -1001,6 +1009,13 @@ int main() {
                     finalSatisfaction = std::min(100, finalSatisfaction + 5);
                 }
 
+                // Cleanliness impact on satisfaction (Stage 17)
+                if (employeeMgr.GetCleanliness() < 40) {
+                    finalSatisfaction = std::max(10, finalSatisfaction - 10);
+                } else if (employeeMgr.GetCleanliness() >= 90) {
+                    finalSatisfaction = std::min(100, finalSatisfaction + 3);
+                }
+
                 // Use custom feedback from Advanced AI (Tahap 14)
                 std::string customFb = cust.GetFeedbackMessage();
                 reputation.RecordRating(cust.GetId(), cust.GetName(), finalSatisfaction, cust.GetCarriedSummaryString(), cust.DidSuccessfullyBuy(), stars, feedback);
@@ -1038,17 +1053,18 @@ int main() {
             BeginMode3D(player.GetCamera());
                 shop.Render();
                 furniture.Render(); // 3D Furniture & Decorations
-                employeeMgr.Render3D(); // 3D Employees (Stage 16)
+                employeeMgr.Render3D(); // 3D Employees (Stage 16 & 17)
                 for (auto& cust : customers) {
                     cust.Render();
                 }
                 player.RenderHeldItem();
             EndMode3D();
 
-            // Render 2D Overhead Speech Bubbles for Customers
+            // Render 2D Overhead Speech Bubbles for Customers & Employees
             for (auto& cust : customers) {
                 cust.RenderSpeechBubble2D(player.GetCamera(), screenWidth, screenHeight);
             }
+            employeeMgr.RenderSpeechBubbles2D(player.GetCamera(), screenWidth, screenHeight);
 
             // 2D HUD / UI Rendering
             // Top-Left Controls & Status Box
@@ -1073,7 +1089,7 @@ int main() {
             DrawText("F5 / F9  : Quick Save / Quick Load", 25, 157, 13, { 100, 220, 255, 255 });
             DrawText("TAB      : Menu Supplier & Order", 25, 175, 13, { 255, 180, 50, 255 });
             DrawText("P        : Manajemen Harga Jual", 25, 193, 13, { 100, 200, 255, 255 });
-            DrawText("K        : Manajemen Karyawan (Stage 16)", 25, 211, 13, { 0, 230, 200, 255 });
+            DrawText("K        : Manajemen Karyawan (Stage 16-17)", 25, 211, 13, { 0, 230, 200, 255 });
             DrawText("F        : Ringkasan Keuangan Toko", 25, 229, 13, { 255, 220, 80, 255 });
             DrawText("R        : Reputasi & Rating Toko", 25, 247, 13, { 241, 196, 15, 255 });
             DrawText("U        : Upgrade Toko (Shop Upgrade)", 25, 265, 13, { 52, 152, 219, 255 });
@@ -1092,16 +1108,18 @@ int main() {
             std::string levelSummary = "Toko: Lvl " + std::to_string(shopUpgrade.GetShopSizeLevel()) +
                                         " | Rak: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::SHELF_CAPACITY)) +
                                         " | Gudang: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::STORAGE_CAPACITY)) +
-                                        " | Karyawan: " + std::to_string(employeeMgr.GetActiveEmployeeCount()) + "/" + std::to_string(employeeMgr.GetMaxEmployeeCapacity(shopUpgrade.GetShopSizeLevel()));
+                                        " | Staf: " + std::to_string(employeeMgr.GetActiveEmployeeCount()) + "/" + std::to_string(employeeMgr.GetMaxEmployeeCapacity(shopUpgrade.GetShopSizeLevel()));
             DrawText(levelSummary.c_str(), 25, 347, 12, { 100, 220, 255, 255 });
 
-            // Rating & Reputation Indicators on HUD
+            // Rating, Reputation, Cleanliness on HUD
             std::string repHudText = "";
             if (reputation.HasRatings()) {
                 repHudText = "Rating: " + std::string(TextFormat("%.1f/5", reputation.GetAverageRating())) +
-                             " | Reputasi: " + std::to_string(reputation.GetReputation()) + "/100";
+                             " | Rep: " + std::to_string(reputation.GetReputation()) + "/100" +
+                             " | Bersih: " + std::to_string(employeeMgr.GetCleanliness()) + "%";
             } else {
-                repHudText = "Rating: Belum ada | Reputasi: " + std::to_string(reputation.GetReputation()) + "/100";
+                repHudText = "Rating: - | Rep: " + std::to_string(reputation.GetReputation()) + "/100" +
+                             " | Bersih: " + std::to_string(employeeMgr.GetCleanliness()) + "%";
             }
             DrawText(repHudText.c_str(), 25, 367, 12, { 255, 215, 0, 255 });
 
@@ -1118,7 +1136,7 @@ int main() {
             // Center Interaction Prompt (When player aims at rack, storage pallet, or employee)
             if (nearbyEmployee != nullptr) {
                 std::string empInfo = "[Karyawan] " + nearbyEmployee->name + " (" + nearbyEmployee->GetRoleString() + " Lvl " + std::to_string(nearbyEmployee->level) +
-                                      ") | Skill: " + std::to_string(nearbyEmployee->skill) + " | Morale: " + std::to_string(nearbyEmployee->morale) + " | Gaji: Rp" + std::to_string(nearbyEmployee->salary) + "/hr";
+                                      ") | Task: " + nearbyEmployee->GetCurrentTaskString() + " | Skill: " + std::to_string(nearbyEmployee->skill) + " | Morale: " + std::to_string(nearbyEmployee->morale);
                 int textWidth = MeasureText(empInfo.c_str(), 15);
                 int boxX = (screenWidth - textWidth) / 2 - 20;
                 int boxY = screenHeight / 2 + 50;

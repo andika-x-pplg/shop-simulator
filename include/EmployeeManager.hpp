@@ -2,15 +2,25 @@
 #include "Employee.hpp"
 #include <vector>
 #include <string>
+#include <set>
 
 class Finance;
 class DailyStats;
 class Shop;
 class ShopUpgrade;
+class Customer;
+class PriceManager;
+class Reputation;
 
 enum class EmployeeMenuTab {
     MY_EMPLOYEES = 0,
     HIRE_CANDIDATES
+};
+
+struct DirtySpot {
+    Vector3 position;
+    float dirtLevel; // 0.0 to 1.0
+    bool isReserved;
 };
 
 class EmployeeManager {
@@ -18,8 +28,9 @@ public:
     static EmployeeManager& Instance();
 
     void Init();
-    void Update(float deltaTime, Shop& shop);
+    void Update(float deltaTime, Shop& shop, std::vector<Customer>& customers, bool isShopOpen, std::string& outNotification, Color& outNoticeColor);
     void Render3D();
+    void RenderSpeechBubbles2D(Camera3D camera, int screenWidth, int screenHeight);
 
     // Queries
     const std::vector<Employee>& GetActiveEmployees() const { return activeEmployees; }
@@ -36,6 +47,11 @@ public:
 
     // End-of-day Salary payment
     bool ProcessDailySalaries(Finance& finance, DailyStats& dailyStats, std::string& outSummary);
+
+    // Store Cleanliness System (Stage 17)
+    int GetCleanliness() const { return (int)storeCleanliness; }
+    void SetCleanliness(float val) { storeCleanliness = std::max(0.0f, std::min(100.0f, val)); }
+    const std::vector<DirtySpot>& GetDirtySpots() const { return dirtySpots; }
 
     // UI Menu Navigation
     bool IsMenuOpen() const { return menuOpen; }
@@ -72,6 +88,14 @@ private:
     std::vector<Employee> activeEmployees;
     std::vector<Employee> candidatePool;
 
+    // Cleanliness & dirty spots in store
+    float storeCleanliness;
+    std::vector<DirtySpot> dirtySpots;
+    float dirtSpawnTimer;
+
+    // Task check timers (Performance optimization: scan intervals)
+    float taskDecisionInterval;
+
     bool menuOpen;
     EmployeeMenuTab currentTab;
     int selectedIndex;
@@ -81,4 +105,15 @@ private:
 
     void AssignWorkplacePositions(Shop& shop);
     void GenerateDefaultCandidates();
+    void InitCleanlinessSpots();
+
+    // Stage 17 Automation Subsystems
+    void UpdateCashierEmployee(Employee& emp, float deltaTime, Shop& shop, std::vector<Customer>& customers, bool isShopOpen, std::string& outNotice, Color& outNoticeColor);
+    void UpdateStockerEmployee(Employee& emp, float deltaTime, Shop& shop, bool isShopOpen, std::set<int>& reservedRacks, std::string& outNotice, Color& outNoticeColor);
+    void UpdateCleanerEmployee(Employee& emp, float deltaTime, Shop& shop, bool isShopOpen, std::string& outNotice, Color& outNoticeColor);
+
+    // Navigation & Collision avoidance helper
+    void MoveEmployeeTowards(Employee& emp, Vector3 targetPos, float speed, float deltaTime);
+    void BuildPath(Employee& emp, Vector3 targetPos);
 };
+
