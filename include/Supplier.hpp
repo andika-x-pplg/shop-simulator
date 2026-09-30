@@ -19,6 +19,8 @@ struct SupplierOrder {
     OrderStatus status;
 };
 
+class Finance; // Forward declaration
+
 class Supplier {
 public:
     Supplier();
@@ -27,8 +29,8 @@ public:
     void Init();
     void Update(float deltaTime, Storage& storage, std::vector<std::string>& outDeliveredNotices);
 
-    // Order operations
-    bool PlaceOrder(ProductType type, int quantity, int& currentShopMoney, std::string& outErrorMessage);
+    // Order operations with single-source Finance system
+    bool PlaceOrder(ProductType type, int quantity, Finance& finance, std::string& outErrorMessage);
 
     // Active Orders & Delivery Queries
     const std::vector<SupplierOrder>& GetActiveOrders() const { return activeOrders; }

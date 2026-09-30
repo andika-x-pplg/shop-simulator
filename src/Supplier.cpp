@@ -1,4 +1,5 @@
 #include "Supplier.hpp"
+#include "Finance.hpp"
 
 Supplier::Supplier()
     : menuOpen(false),
@@ -46,7 +47,7 @@ void Supplier::DecreaseQuantity(int step) {
     if (orderQuantity < 1) orderQuantity = 1;
 }
 
-bool Supplier::PlaceOrder(ProductType type, int quantity, int& currentShopMoney, std::string& outErrorMessage) {
+bool Supplier::PlaceOrder(ProductType type, int quantity, Finance& finance, std::string& outErrorMessage) {
     if (quantity <= 0) {
         outErrorMessage = "Jumlah pesanan harus lebih dari 0!";
         return false;
@@ -55,13 +56,17 @@ bool Supplier::PlaceOrder(ProductType type, int quantity, int& currentShopMoney,
     ProductInfo info = GetProductInfo(type);
     int totalCost = info.buyPrice * quantity;
 
-    if (currentShopMoney < totalCost) {
-        outErrorMessage = "Uang tidak cukup! Butuh Rp" + std::to_string(totalCost) + " (Saldo: Rp" + std::to_string(currentShopMoney) + ")";
+    if (finance.GetCurrentBalance() < totalCost) {
+        outErrorMessage = "Uang tidak cukup! Butuh Rp" + std::to_string(totalCost) + " (Saldo: Rp" + std::to_string(finance.GetCurrentBalance()) + ")";
         return false;
     }
 
-    // Deduct money from shop treasury
-    currentShopMoney -= totalCost;
+    // Deduct money and record expense through single Finance system (counted exactly once)
+    std::string desc = "Beli " + std::to_string(quantity) + "x " + info.name + " dari Supplier";
+    if (!finance.RecordExpense(totalCost, desc)) {
+        outErrorMessage = "Gagal memproses pengeluaran!";
+        return false;
+    }
 
     // Create delivery order (5 seconds delivery time)
     SupplierOrder order;

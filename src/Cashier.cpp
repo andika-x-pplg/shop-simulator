@@ -68,14 +68,16 @@ Vector3 Cashier::GetQueuePosition(int queueIndex) const {
     return { registerX, 0.0f, frontZ - queueIndex * queueSpacing };
 }
 
+#include "PriceManager.hpp"
+
 bool Cashier::ProcessPayment(int customerId, const std::string& customerName, ProductType product, int& outAmount) {
     if (product == ProductType::NONE) {
         outAmount = 0;
         return false;
     }
 
-    ProductInfo info = GetProductInfo(product);
-    outAmount = info.sellPrice;
+    // Always fetch dynamic updated sell price from PriceManager
+    outAmount = PriceManager::Instance().GetSellPrice(product);
     return true;
 }
 

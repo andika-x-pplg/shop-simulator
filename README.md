@@ -88,6 +88,42 @@ Game simulasi toko 3D modern berbasis C++17 dan raylib 5.0 tanpa game engine ber
   - Informasi perbandingan realtime stok rak (*Shelf Stock*) dan stok gudang (*Storage Stock*).
   - Banner notifikasi delivery pesanan tiba dan feedback popup interaksi restock.
 
+## Fitur Tahap 7 (Sistem Ekonomi Toko, Keuntungan, Kerugian, dan Manajemen Harga)
+- **Satu Sumber Data Keuangan Toko (`Finance.hpp`, `Finance.cpp`)**:
+  - `currentBalance`: Saldo uang toko (dimulai dari Rp100.000).
+  - `totalRevenue`: Akumulasi seluruh pendapatan kotor dari transaksi customer.
+  - `totalExpenses`: Akumulasi seluruh pengeluaran pengadaan barang dari supplier.
+  - `totalProfit`: Keuntungan bersih real-time yang dihitung secara matematis: `Profit = Total Revenue - Total Expenses`.
+  - Riwayat 10 transaksi finansial terakhir (*audit trail* pemasukan & pengeluaran).
+- **Sistem Pendapatan & Pengeluaran Tepat 1 Kali**:
+  - Pembayaran customer di kasir menambahkan `totalRevenue` dan `currentBalance` tepat satu kali per transaksi (`+Rp[Harga] Pendapatan`).
+  - Pembelian order supplier menambahkan `totalExpenses` dan mengurangi `currentBalance` tepat satu kali saat order dibuat (`-Rp[Biaya] Pengadaan`).
+  - Tiba/selesainya delivery barang di storage tidak memotong saldo lagi.
+- **Sistem Manajemen Harga Jual (`PriceManager.hpp`, `PriceManager.cpp`)**:
+  - Menu interaktif Manajemen Harga (Tombol `P`) untuk mengatur harga jual masing-masing produk:
+    - **Minuman**: Modal Rp3.000 | Jual default Rp5.000 (Margin Rp2.000)
+    - **Roti**: Modal Rp5.000 | Jual default Rp8.000 (Margin Rp3.000)
+    - **Makanan Kaleng**: Modal Rp8.000 | Jual default Rp12.000 (Margin Rp4.000)
+  - Pengubahan harga jual dinamis (`+-Rp500`) menggunakan tombol `A / D / Panah`.
+  - Validasi harga: Harga jual diproteksi tidak boleh 0 atau bernilai negatif (minimal Rp500).
+  - Indikator peringatan jika harga jual disetel di bawah harga modal beli: *(Peringatan: harga jual di bawah harga beli)*.
+  - Perhitungan margin profit per unit secara otomatis: `Margin = Harga Jual - Harga Beli`.
+- **Integrasi Transaksi Customer & Kasir Dinamis**:
+  - Kasir (`Cashier::ProcessPayment`) selalu membaca harga jual paling mutakhir dari `PriceManager`.
+  - Customer membayar produk dengan harga jual terbaru yang telah disesuaikan oleh pemain.
+  - Harga grosir supplier tetap stabil dan tidak terpengaruh oleh penyesuaian harga jual toko.
+- **Menu Ringkasan Keuangan Toko (Tombol `F`)**:
+  - Tampilan modal ringkasan keuangan real-time dengan kartu visual metrik:
+    - Saldo Toko (*Current Balance*)
+    - Total Pendapatan (*Total Revenue*)
+    - Total Pengeluaran (*Total Expenses*)
+    - Keuntungan Bersih (*Profit*) / Kerugian (*Loss*)
+  - Daftar riwayat transaksi pemasukan dan pengeluaran terbaru.
+- **Banner Notifikasi Transaksi & Finansial**:
+  - Notifikasi instan saat customer membayar (`+Rp5000 Pendapatan`), saat order supplier (`-Rp30000 Pengadaan`), dan saat mengubah harga jual (`Harga Minuman diubah menjadi Rp6000`).
+- **HUD Bersih & Ringkas**:
+  - HUD utama tetap fokus menampilkan saldo toko aktual (`Uang Toko: RpXXXXX`) tanpa mengaburkan pandangan permainan.
+
 ## Struktur Project
 ```text
 shop-simulator/
@@ -97,7 +133,9 @@ shop-simulator/
 │   ├── Cashier.hpp     # Class Cashier (counter 3D, NPC kasir, POS terminal, antrian, & transaksi)
 │   ├── Common.hpp      # Struktur matematika & AABB bounding box
 │   ├── Customer.hpp    # Class Customer (FSM, shopping, cashier queue & payment)
+│   ├── Finance.hpp     # Single source of truth keuangan (saldo, revenue, expenses, profit/loss)
 │   ├── Player.hpp      # Controller first person, held item & feedback
+│   ├── PriceManager.hpp# Manajemen harga jual produk, validasi harga & margin unit
 │   ├── Product.hpp     # Definisi produk, harga jual, harga beli supplier, & visual
 │   ├── Rack.hpp        # Class Rack (stok rak, kapasitas maks, visual items di rak & interaksi)
 │   ├── Shop.hpp        # Geometri toko, layout rak, kasir, storage pallets & collision list
@@ -106,12 +144,14 @@ shop-simulator/
 ├── src/                # C++ Source files
 │   ├── Cashier.cpp     # Render kasir 3D, NPC kasir berseragam, mesin register & pembayaran
 │   ├── Customer.cpp    # Navigasi lorong, antrean kasir, checkout & status tag
+│   ├── Finance.cpp     # Pencatatan transaksi pendapatan, pengeluaran & perhitungan profit
 │   ├── Player.cpp      # Pergerakan, first-person camera & render held item
+│   ├── PriceManager.cpp# Penyesuaian harga jual, validasi batas & kalkulasi margin
 │   ├── Rack.cpp        # Implementasi render rak bertingkat, batas kapasitas & visual produk
 │   ├── Shop.cpp        # Layout toko, penempatan rak, kasir, storage gudang, waypoint & collider
 │   ├── Storage.cpp     # Render pallet gudang 3D & manajemen stok gudang
 │   ├── Supplier.cpp    # Pengadaan barang, countdown delivery & transfer stok otomatis ke gudang
-│   └── main.cpp        # Game loop, menu supplier (TAB), restock loop, notifikasi & HUD
+│   └── main.cpp        # Game loop, modal Supplier (TAB), Harga (P), Keuangan (F), & HUD
 └── assets/             # Direktori aset (models, textures, sounds, fonts)
 ```
 
@@ -120,10 +160,11 @@ shop-simulator/
 - **Mouse**: Mengarahkan pandangan kamera (Pitch / Yaw)
 - **E**: Interaksi Player (Ambil dari storage / Restock ke rak / Taruh kembali ke storage)
 - **TAB**: Buka / Tutup Menu Pengadaan Barang Supplier
-- **1, 2, 3**: Pilih jenis produk di Menu Supplier
-- **Panah Atas / Bawah (+ / -)**: Menambah atau mengurangi jumlah pesanan supplier
-- **ENTER**: Beli & Bayar Pesanan Supplier
-- **ESC**: Keluar dari game
+- **P**: Buka / Tutup Menu Manajemen Harga Jual
+- **F**: Buka / Tutup Menu Ringkasan Keuangan Toko
+- **Panah / W, S, A, D**: Navigasi dan atur kuantitas / harga pada menu yang terbuka
+- **ENTER**: Eksekusi Pembelian Pesanan Supplier
+- **ESC**: Tutup Menu Aktif / Keluar dari game
 
 ## Cara Build & Menjalankan (Windows)
 
