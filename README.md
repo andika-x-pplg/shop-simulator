@@ -343,6 +343,23 @@ shop-simulator/
 - **Resource Management & Performance**: Zero memory leak pada entity lifecycle customer/order delivery, procedural audio fallback aman tanpa ketergantungan file eksternal, render primitive batch optimal pada 60 FPS terkunci.
 - **Release Directory Packaging**: Folder mandiri `release/` yang berisi `ShopSimulator.exe`, aset, dan panduan `README.txt` siap distribusi langsung.
 
+## Fitur Tahap 14 (Advanced Customer AI & NPC Behavior)
+- **5 Tipe Kepribadian Customer (`CustomerType`)**:
+  - `NORMAL`: Perilaku standar, berbelanja 1-2 item, toleransi antre wajar.
+  - `IMPATIENT`: Kecepatan jalan lebih tinggi (+15%), toleransi antre sangat rendah (<14 detik), langsung membatalkan belanja jika antrean terlalu lama.
+  - `PATIENT`: Kecepatan jalan santai, toleransi antre sangat tinggi (<40 detik), penurunan kepuasan lambat.
+  - `BIG_SHOPPER`: Membeli banyak varian produk sekaligus (2-4 item), daftar belanja multi-item.
+  - `PRICE_SENSITIVE`: Memeriksa harga jual toko terhadap modal dasar; membatalkan pembelian dan memberi rating rendah jika harga dinaikkan >35% di atas batas standar.
+- **Sistem Keranjang & Shopping List (`ShoppingList`)**:
+  - Customer menyusuri beberapa rak secara berurutan sesuai daftar belanjaan mereka sebelum menuju kasir.
+  - Tumpukan item yang dibawa dirender secara 3D di tangan/keranjang customer.
+- **Dynamic Queue & Transaction Flow**:
+  - Seluruh item dalam keranjang customer dihitung dan dibayar di kasir dalam satu transaksi terpadu tanpa double billing.
+- **Crowd Separation Avoidance**:
+  - Algoritma separasi ringan antar NPC untuk mencegah penumpukan customer di satu titik.
+- **Customer AI Debug Monitor (Tombol `F3`)**:
+  - Overlay monitor realtime untuk memantau ID, tipe kepribadian, status state machine, kepuasan %, dan isi keranjang tiap customer aktif.
+
 ## Struktur Direktori Proyek
 
 ```
@@ -357,7 +374,7 @@ shop-simulator/
 │   ├── AudioManager.hpp# Audio manager & procedural waveform generator
 │   ├── Cashier.hpp     # Deklarasi Kasir 3D, NPC kasir & POS machine
 │   ├── Common.hpp      # Struktur AABB, ProductType, dan Enum umum
-│   ├── Customer.hpp    # State machine AI Customer, antrean & kepuasan
+│   ├── Customer.hpp    # State machine AI Customer, antrean, shopping list & kepuasan
 │   ├── DailyStats.hpp  # Agregator statistik harian & modal ringkasan
 │   ├── Finance.hpp     # Saldo toko, riwayat transaksi & penghitungan profit
 │   ├── Furniture.hpp   # Furniture 3D, peralatan toko & equipment bonuses
@@ -375,7 +392,7 @@ shop-simulator/
 ├── src/                # C++ Source files
 │   ├── AudioManager.cpp# Implementasi sintesis SFX procedural & volume routing
 │   ├── Cashier.cpp     # Render kasir 3D, NPC kasir berseragam, mesin register & pembayaran
-│   ├── Customer.cpp    # Navigasi lorong, antrean kasir, checkout, scoring kepuasan & rating
+│   ├── Customer.cpp    # Navigasi lorong, AI shopping list, antrean kasir, scoring kepuasan & rating
 │   ├── DailyStats.cpp  # Implementasi agregasi statistik harian & render modal ringkasan harian
 │   ├── Finance.cpp     # Pencatatan transaksi pendapatan, pengeluaran & perhitungan profit
 │   ├── Furniture.cpp   # Render 3D furniture/equipment, collider generator & bonus logic
@@ -398,6 +415,7 @@ shop-simulator/
 - **Mouse**: Mengarahkan pandangan kamera (Pitch / Yaw)
 - **E**: Interaksi Player (Ambil dari storage / Restock ke rak / Taruh kembali ke storage)
 - **M / ESC**: Buka Menu Game (Save, Load, New Game, Continue, Exit) / Tutup Menu Aktif
+- **F3**: Toggle Customer AI Debug Monitor
 - **F5 / F9**: Quick Save / Quick Load
 - **U**: Buka / Tutup Menu Upgrade Toko (Shop Size, Shelf, Storage, Customer)
 - **B**: Buka / Tutup Menu Beli Furniture & Peralatan (Shop Catalog)

@@ -123,7 +123,15 @@ int Shop::FindAvailableRackIndex(int preferredStartIndex) const {
             return (int)idx;
         }
     }
+    return -1;
+}
 
+int Shop::FindRackWithProduct(ProductType type) const {
+    for (size_t i = 0; i < racks.size(); ++i) {
+        if (racks[i].GetProductType() == type && racks[i].HasStock()) {
+            return (int)i;
+        }
+    }
     return -1;
 }
 

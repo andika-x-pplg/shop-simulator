@@ -84,13 +84,14 @@ int main() {
     float topNoticeTimer = 4.0f;
     Color topNoticeColor = { 46, 204, 113, 235 };
 
-    // 4. Customer NPC System Management
+    // 4. Customer NPC System Management (Tahap 14: Advanced Customer AI)
     std::vector<Customer> customers;
     float spawnTimer = 2.0f; // First customer arrives in 2 seconds
     int customerCounter = 1;
+    bool showAiDebug = false; // Toggleable AI Debug Mode (F3)
 
     // Pre-defined customer profiles (name, skin tone, shirt color)
-    const std::vector<std::string> customerNames = { "Budi", "Siti", "Andi", "Dewi", "Rian", "Maya", "Doni", "Putri" };
+    const std::vector<std::string> customerNames = { "Budi", "Siti", "Andi", "Dewi", "Rian", "Maya", "Doni", "Putri", "Ahmad", "Citra" };
     const std::vector<Color> shirtColors = {
         { 52, 152, 219, 255 },  // Blue
         { 231, 76, 60, 255 },   // Red
@@ -255,6 +256,15 @@ int main() {
                 topNoticeColor = { 231, 76, 60, 235 };
             }
             topNoticeTimer = 3.5f;
+        }
+
+        // Toggle Customer AI Debug Overlay (F3) (Tahap 14)
+        if (IsKeyPressed(KEY_F3)) {
+            showAiDebug = !showAiDebug;
+            topNotice = showAiDebug ? "AI Debug Overlay: AKTIF" : "AI Debug Overlay: NON-AKTIF";
+            topNoticeColor = { 100, 200, 255, 235 };
+            topNoticeTimer = 2.0f;
+            audioMgr.PlayEvent(SoundEvent::CLICK);
         }
 
         // -------------------------------------------------------------
@@ -680,7 +690,7 @@ int main() {
             }
         }
 
-        // Customer Spawner & State Management
+        // Customer Spawner & State Management (Tahap 14: Advanced Customer AI)
         // ONLY SPAWN NEW CUSTOMERS IF SHOP IS OPEN (Tahap 10)
         size_t maxCustCapacity = shopUpgrade.GetMaxActiveCustomers();
         if (gameTime.IsShopOpen()) {
@@ -694,12 +704,27 @@ int main() {
                 Color cShirt = shirtColors[customerCounter % shirtColors.size()];
                 Color cSkin = skinColors[customerCounter % skinColors.size()];
 
-                Customer newCust(customerCounter, cName, spawnPos, cSkin, cShirt);
+                // Determine customer personality type (Tahap 14)
+                CustomerType cType = CustomerType::NORMAL;
+                int typeRoll = customerCounter % 5;
+                if (typeRoll == 1) cType = CustomerType::IMPATIENT;
+                else if (typeRoll == 2) cType = CustomerType::PATIENT;
+                else if (typeRoll == 3) cType = CustomerType::BIG_SHOPPER;
+                else if (typeRoll == 4) cType = CustomerType::PRICE_SENSITIVE;
+
+                Customer newCust(customerCounter, cName, cType, spawnPos, cSkin, cShirt);
                 customers.push_back(newCust);
                 customerCounter++;
                 
-                spawnTimer = 5.0f + (customerCounter % 3) * 1.2f;
+                // Spawn frequency influenced by store reputation (Higher reputation = faster customer flow)
+                float repFactor = (float)reputation.GetReputation() / 100.0f; // 0.0 to 1.0
+                spawnTimer = (5.5f - (repFactor * 2.2f)) + (customerCounter % 3) * 0.8f;
             }
+        }
+
+        // Apply separation avoidance to prevent severe clustering (Tahap 14)
+        for (auto& cust : customers) {
+            cust.ApplySeparation(customers, deltaTime);
         }
 
         // Count and assign queue indexes for customers heading to or at the cashier
@@ -713,17 +738,17 @@ int main() {
 
             bool didPay = false;
             int paidAmount = 0;
-            std::string paidProduct = "";
+            std::string paidProductSummary = "";
 
-            cust.Update(deltaTime, shop, qIndex, didPay, paidAmount, paidProduct);
+            cust.Update(deltaTime, shop, qIndex, didPay, paidAmount, paidProductSummary);
 
             // Record customer revenue exactly once through single Finance system & Daily Stats
             if (didPay && paidAmount > 0) {
-                finance.RecordRevenue(paidAmount, "Penjualan " + paidProduct + " ke " + cust.GetName());
+                finance.RecordRevenue(paidAmount, "Penjualan [" + paidProductSummary + "] ke " + cust.GetName());
                 dailyStats.RecordRevenue(paidAmount);
                 dailyStats.IncrementCustomerServed();
 
-                topNotice = "+Rp" + std::to_string(paidAmount) + " Pendapatan (" + cust.GetName() + " - " + paidProduct + ")";
+                topNotice = "+Rp" + std::to_string(paidAmount) + " Pendapatan (" + cust.GetName() + ": " + paidProductSummary + ")";
                 topNoticeColor = { 20, 130, 60, 235 };
                 topNoticeTimer = 3.5f;
 
@@ -743,13 +768,18 @@ int main() {
                     finalSatisfaction = std::min(100, finalSatisfaction + 5);
                 }
 
-                reputation.RecordRating(cust.GetId(), cust.GetName(), finalSatisfaction, cust.GetHeldProductName(), cust.DidSuccessfullyBuy(), stars, feedback);
+                // Use custom feedback from Advanced AI (Tahap 14)
+                std::string customFb = cust.GetFeedbackMessage();
+                reputation.RecordRating(cust.GetId(), cust.GetName(), finalSatisfaction, cust.GetCarriedSummaryString(), cust.DidSuccessfullyBuy(), stars, feedback);
+                if (!customFb.empty()) {
+                    feedback = customFb;
+                }
                 dailyStats.RecordRating(cust.GetName(), stars, finalSatisfaction, feedback);
 
                 // Rating & feedback notification
-                topNotice = cust.GetName() + " memberi rating " + std::to_string(stars) + "/5 (" + feedback + ")";
+                topNotice = cust.GetName() + " [" + cust.GetCustomerTypeString() + "] rating " + std::to_string(stars) + "/5 (" + feedback + ")";
                 topNoticeColor = (stars >= 4) ? Color{ 46, 204, 113, 235 } : (stars == 3) ? Color{ 243, 156, 18, 235 } : Color{ 231, 76, 60, 235 };
-                topNoticeTimer = 3.5f;
+                topNoticeTimer = 3.8f;
             }
         }
         shop.GetCashier().SetQueueCount(cashierQueueCount);
@@ -1489,6 +1519,32 @@ int main() {
             // ==========================================
             if (saveSystem.IsMenuOpen()) {
                 saveSystem.RenderMenu(screenWidth, screenHeight, defaultSaveFile, gameTime.GetCurrentDay(), gameTime.GetFormattedTime(), finance.GetCurrentBalance());
+            }
+
+            // ==========================================
+            // CUSTOMER AI DEBUG OVERLAY (Tahap 14 - F3)
+            // ==========================================
+            if (showAiDebug && !anyModalOpen) {
+                int dbgW = 440;
+                int dbgH = 35 + std::min(6, (int)customers.size()) * 42;
+                int dbgX = screenWidth - dbgW - 15;
+                int dbgY = 80;
+
+                DrawRectangle(dbgX, dbgY, dbgW, dbgH, { 15, 20, 30, 235 });
+                DrawRectangleLines(dbgX, dbgY, dbgW, dbgH, { 0, 200, 255, 255 });
+                DrawText("CUSTOMER AI DEBUG MONITOR [F3: Tutup]", dbgX + 15, dbgY + 10, 14, { 0, 255, 255, 255 });
+
+                int rowY = dbgY + 32;
+                for (size_t i = 0; i < customers.size() && i < 6; ++i) {
+                    const auto& c = customers[i];
+                    std::string line1 = "#" + std::to_string(c.GetId()) + " " + c.GetName() + 
+                                        " [" + c.GetCustomerTypeString() + "] Sat:" + std::to_string(c.GetSatisfaction()) + "%";
+                    std::string line2 = "  State: " + c.GetStateString() + " | Item: " + c.GetCarriedSummaryString();
+                    
+                    DrawText(line1.c_str(), dbgX + 15, rowY, 12, { 255, 220, 100, 255 });
+                    DrawText(line2.c_str(), dbgX + 15, rowY + 16, 11, { 180, 220, 255, 255 });
+                    rowY += 40;
+                }
             }
 
         EndDrawing();

@@ -104,3 +104,9 @@
 21427	122529	8124388081898526	_deps/raylib-build/raylib/CMakeFiles/raylib.dir/raudio.c.obj	2af432ce9157606f
 122529	122914	8124389092916787	_deps/raylib-build/raylib/libraylib.a	f07c1203b0cb6de1
 122915	123395	8124389096778755	ShopSimulator.exe	229a9407f5b7bca8
+161	2592	8124487327066457	CMakeFiles/ShopSimulator.dir/src/Shop.cpp.obj	93eb0990133aa4a3
+173	3270	8124487327077298	CMakeFiles/ShopSimulator.dir/src/ShopUpgrade.cpp.obj	3e351bcf9fd748c5
+168	3337	8124487327077298	CMakeFiles/ShopSimulator.dir/src/Customer.cpp.obj	859dbf6bd310197e
+179	4088	8124487327235666	CMakeFiles/ShopSimulator.dir/src/SaveSystem.cpp.obj	158e2f4f8928bbbf
+36	7761	8124487325743938	CMakeFiles/ShopSimulator.dir/src/main.cpp.obj	4694fd00e7f393a3
+7761	8297	8124487403045409	ShopSimulator.exe	229a9407f5b7bca8
