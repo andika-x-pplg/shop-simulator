@@ -130,16 +130,6 @@ Customer::Customer(int id, const std::string& name, CustomerType type, Vector3 s
 
     GenerateShoppingList();
     BuildEntryWaypoints();
-
-    // Random greeting on entering
-    const std::vector<std::string> greetings = {
-        "Semoga ada yang aku cari.",
-        "Mau belanja sebentar.",
-        "Aku cuma cari beberapa barang.",
-        "Semoga stoknya masih ada.",
-        "Hari ini mau belanja kebutuhan."
-    };
-    Say(greetings[id % greetings.size()], 3.0f, Color{ 240, 245, 255, 245 }, Color{ 25, 45, 75, 255 });
 }
 
 void Customer::Say(const std::string& text, float duration, Color bubbleColor, Color textColor) {
@@ -389,8 +379,16 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
                 currentWaypointIndex++;
             }
         } else {
-            // Reached lobby -> Start browsing shopping list
+            // Reached lobby inside shop -> Say greeting and start browsing shopping list
             state = CustomerState::BROWSING;
+            const std::vector<std::string> greetings = {
+                "Semoga ada yang aku cari.",
+                "Mau belanja sebentar.",
+                "Aku cuma cari beberapa barang.",
+                "Semoga stoknya masih ada.",
+                "Hari ini mau belanja kebutuhan."
+            };
+            Say(greetings[id % greetings.size()], 3.0f, Color{ 240, 245, 255, 245 }, Color{ 25, 45, 75, 255 });
         }
     }
     // -------------------------------------------------------------
