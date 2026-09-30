@@ -78,6 +78,16 @@ public:
     bool DidSuccessfullyBuy() const { return hasPaid && !carriedItems.empty(); }
     std::string GetFeedbackMessage() const;
 
+    // Speech Bubble & Dialogue System (Tahap 15 expansion)
+    void Say(const std::string& text, float duration = 3.0f, Color bubbleColor = Color{ 245, 245, 250, 245 }, Color textColor = Color{ 20, 25, 35, 255 });
+    bool HasActiveDialogue() const { return speechBubbleTimer > 0.0f && !speechBubbleText.empty(); }
+    const std::string& GetSpeechText() const { return speechBubbleText; }
+    float GetSpeechTimer() const { return speechBubbleTimer; }
+    Color GetSpeechBubbleColor() const { return speechBubbleColor; }
+    Color GetSpeechTextColor() const { return speechTextColor; }
+    void RenderSpeechBubble2D(Camera3D camera, int screenWidth, int screenHeight);
+    void RenderSpeechBubble();
+
     // Separation & crowd avoidance
     void ApplySeparation(const std::vector<Customer>& otherCustomers, float deltaTime);
 
@@ -115,6 +125,13 @@ private:
     // Payment timer & flag (ensures transaction triggers exactly once)
     float payTimer;
     bool hasPaid;
+
+    // Speech Bubble & Dynamic Dialogue System
+    std::string speechBubbleText;
+    float speechBubbleTimer;
+    float speechCooldown;
+    Color speechBubbleColor;
+    Color speechTextColor;
 
     // Satisfaction tracking & single-trigger penalty flags (Tahap 8 & 14)
     int satisfaction;              // 0 - 100 (Awal: 100)

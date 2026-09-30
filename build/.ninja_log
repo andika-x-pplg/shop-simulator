@@ -132,3 +132,9 @@
 145	5548	8124505323617464	CMakeFiles/ShopSimulator.dir/src/SaveSystem.cpp.obj	158e2f4f8928bbbf
 30	8588	8124505322462841	CMakeFiles/ShopSimulator.dir/src/main.cpp.obj	4694fd00e7f393a3
 8588	9243	8124505408091451	ShopSimulator.exe	229a9407f5b7bca8
+41	1512	8124523380314491	CMakeFiles/ShopSimulator.dir/src/Cashier.cpp.obj	f57cee89c873857c
+35	3378	8124523380154077	CMakeFiles/ShopSimulator.dir/src/Customer.cpp.obj	859dbf6bd310197e
+54	4005	8124523380481911	CMakeFiles/ShopSimulator.dir/src/SaveSystem.cpp.obj	158e2f4f8928bbbf
+27	7826	8124523380154077	CMakeFiles/ShopSimulator.dir/src/main.cpp.obj	4694fd00e7f393a3
+22	1627	8124523586250542	CMakeFiles/ShopSimulator.dir/src/PriceManager.cpp.obj	70d500b646e4acc2
+1627	2086	8124523602447830	ShopSimulator.exe	229a9407f5b7bca8

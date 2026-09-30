@@ -1,5 +1,6 @@
 #include "PriceManager.hpp"
 #include <algorithm>
+#include <cmath>
 
 PriceManager& PriceManager::Instance() {
     static PriceManager instance;
@@ -66,6 +67,53 @@ bool PriceManager::SetSellPrice(ProductType type, int newPrice, std::string& out
         outFeedback = "Harga jual " + info.name + " berhasil diubah menjadi Rp" + std::to_string(newPrice);
     }
     return true;
+}
+
+int PriceManager::GetReferencePrice(ProductType type) const {
+    return GetProductInfo(type).sellPrice;
+}
+
+float PriceManager::GetMarkupPercent(ProductType type) const {
+    int refPrice = GetReferencePrice(type);
+    if (refPrice <= 0) return 0.0f;
+    int curPrice = GetSellPrice(type);
+    return ((float)(curPrice - refPrice) / (float)refPrice) * 100.0f;
+}
+
+void PriceManager::SetMarkupPercent(ProductType type, float percent) {
+    int refPrice = GetReferencePrice(type);
+    if (refPrice <= 0) return;
+    float rawPrice = (float)refPrice * (1.0f + (percent / 100.0f));
+    // Round to nearest 100
+    int roundedPrice = (int)(std::round(rawPrice / 100.0f) * 100.0f);
+    roundedPrice = std::max(500, roundedPrice);
+    sellPrices[type] = roundedPrice;
+}
+
+void PriceManager::AdjustMarkupPercent(ProductType type, float deltaPercent) {
+    float curMarkup = GetMarkupPercent(type);
+    float newMarkup = curMarkup + deltaPercent;
+    SetMarkupPercent(type, newMarkup);
+}
+
+std::string PriceManager::GetPriceStatusLabel(ProductType type) const {
+    float markup = GetMarkupPercent(type);
+    if (markup <= -15.0f) return "Sangat Murah (Diskon Besar)";
+    if (markup < -3.0f)   return "Murah (Di Bawah Pasaran)";
+    if (markup <= 10.0f)  return "Wajar (Harga Pasar)";
+    if (markup <= 25.0f)  return "Sedikit Mahal";
+    if (markup <= 50.0f)  return "Mahal (Kurang Diminati)";
+    return "Sangat Mahal (Resiko Ditolak)";
+}
+
+Color PriceManager::GetPriceStatusColor(ProductType type) const {
+    float markup = GetMarkupPercent(type);
+    if (markup <= -15.0f) return Color{ 46, 204, 113, 255 }; // Bright green
+    if (markup < -3.0f)   return Color{ 52, 152, 219, 255 }; // Light blue
+    if (markup <= 10.0f)  return Color{ 241, 196, 15, 255 }; // Gold / Yellow
+    if (markup <= 25.0f)  return Color{ 230, 126, 34, 255 }; // Orange
+    if (markup <= 50.0f)  return Color{ 231, 76, 60, 255 };  // Red
+    return Color{ 192, 57, 43, 255 };                        // Dark Red
 }
 
 void PriceManager::AdjustSellPrice(ProductType type, int delta) {

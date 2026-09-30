@@ -25,6 +25,11 @@ Customer::Customer()
       maxQueuePatience(25.0f),
       payTimer(0.0f),
       hasPaid(false),
+      speechBubbleText(""),
+      speechBubbleTimer(0.0f),
+      speechCooldown(0.0f),
+      speechBubbleColor{ 245, 245, 250, 245 },
+      speechTextColor{ 20, 25, 35, 255 },
       satisfaction(100),
       totalQueueWaitTime(0.0f),
       penaltyWaitShortApplied(false),
@@ -66,6 +71,11 @@ Customer::Customer(int id, const std::string& name, CustomerType type, Vector3 s
       maxQueuePatience(25.0f),
       payTimer(0.0f),
       hasPaid(false),
+      speechBubbleText(""),
+      speechBubbleTimer(0.0f),
+      speechCooldown(0.0f),
+      speechBubbleColor{ 245, 245, 250, 245 },
+      speechTextColor{ 20, 25, 35, 255 },
       satisfaction(100),
       totalQueueWaitTime(0.0f),
       penaltyWaitShortApplied(false),
@@ -120,6 +130,24 @@ Customer::Customer(int id, const std::string& name, CustomerType type, Vector3 s
 
     GenerateShoppingList();
     BuildEntryWaypoints();
+
+    // Random greeting on entering
+    const std::vector<std::string> greetings = {
+        "Semoga ada yang aku cari.",
+        "Mau belanja sebentar.",
+        "Aku cuma cari beberapa barang.",
+        "Semoga stoknya masih ada.",
+        "Hari ini mau belanja kebutuhan."
+    };
+    Say(greetings[id % greetings.size()], 3.0f, Color{ 240, 245, 255, 245 }, Color{ 25, 45, 75, 255 });
+}
+
+void Customer::Say(const std::string& text, float duration, Color bubbleColor, Color textColor) {
+    speechBubbleText = text;
+    speechBubbleTimer = duration;
+    speechBubbleColor = bubbleColor;
+    speechTextColor = textColor;
+    speechCooldown = 2.0f;
 }
 
 void Customer::GenerateShoppingList() {
@@ -369,6 +397,13 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
     // State 2: BROWSING (Inspect Shopping List)
     // -------------------------------------------------------------
     else if (state == CustomerState::BROWSING) {
+        if (speechBubbleTimer > 0.0f) {
+            speechBubbleTimer -= deltaTime;
+        }
+        if (speechCooldown > 0.0f) {
+            speechCooldown -= deltaTime;
+        }
+
         // Find next item in shopping list that needs to be acquired
         bool hasNextItem = false;
         while (currentShoppingItemIndex < shoppingList.size()) {
@@ -383,6 +418,17 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
 
         if (hasNextItem) {
             state = CustomerState::SEARCHING_PRODUCT;
+            // Occasional browsing chatter
+            if (speechCooldown <= 0.0f && (id + (int)currentShoppingItemIndex) % 3 == 0) {
+                const std::vector<std::string> browseChatter = {
+                    "Hmm, aku butuh ini.",
+                    "Oh, ini yang aku cari.",
+                    "Yang ini boleh juga.",
+                    "Berapa harganya ya?",
+                    "Semoga harganya pas di kantong."
+                };
+                Say(browseChatter[(id + currentShoppingItemIndex) % browseChatter.size()], 2.5f);
+            }
         } else {
             // All shopping list items processed
             if (!carriedItems.empty()) {
@@ -390,15 +436,21 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
                 state = CustomerState::GOING_TO_CASHIER;
                 Vector3 queueSlot = shop.GetCashier().GetQueuePosition(queueIndex);
                 BuildPathToCashier(queueSlot);
+                if (speechCooldown <= 0.0f) {
+                    Say("Semua sudah dapat, sekarang ke kasir.", 2.5f);
+                }
             } else {
                 // Left without any items -> Penalti & leave
                 if (!penaltyNoStockApplied) {
                     satisfaction = std::clamp(satisfaction - 20, 0, 100);
                     penaltyNoStockApplied = true;
                 }
-                specificFeedback = "Semua produk yang saya cari tidak tersedia!";
+                if (specificFeedback.empty()) {
+                    specificFeedback = "Semua produk yang saya cari tidak tersedia!";
+                }
                 state = CustomerState::LEAVING;
                 BuildExitWaypoints(position);
+                Say("Sayang sekali tidak dapat barang.", 2.8f, Color{ 255, 230, 230, 245 }, Color{ 180, 40, 40, 255 });
             }
         }
     }
@@ -406,6 +458,9 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
     // State 3: SEARCHING_PRODUCT
     // -------------------------------------------------------------
     else if (state == CustomerState::SEARCHING_PRODUCT) {
+        if (speechBubbleTimer > 0.0f) speechBubbleTimer -= deltaTime;
+        if (speechCooldown > 0.0f) speechCooldown -= deltaTime;
+
         bool found = SearchTargetRack(shop);
         if (found) {
             state = CustomerState::WALKING_TO_SHELF;
@@ -420,6 +475,7 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
                 satisfaction = std::clamp(satisfaction - 10, 0, 100);
                 penaltyNoStockApplied = true;
             }
+            Say("Yah, " + GetProductInfo(currentTargetProduct).name + " lagi kosong.", 2.5f, Color{ 255, 240, 230, 245 }, Color{ 180, 80, 40, 255 });
             // Skip this item and move to next item on list
             currentShoppingItemIndex++;
             state = CustomerState::BROWSING;
@@ -429,6 +485,9 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
     // State 4: WALKING_TO_SHELF
     // -------------------------------------------------------------
     else if (state == CustomerState::WALKING_TO_SHELF) {
+        if (speechBubbleTimer > 0.0f) speechBubbleTimer -= deltaTime;
+        if (speechCooldown > 0.0f) speechCooldown -= deltaTime;
+
         if (currentWaypointIndex < waypoints.size()) {
             Vector3 targetWp = waypoints[currentWaypointIndex];
             MoveTowards(targetWp, deltaTime);
@@ -444,36 +503,120 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
         }
     }
     // -------------------------------------------------------------
-    // State 5: AT_SHELF (Inspecting Product & Price Check)
+    // State 5: AT_SHELF (Dynamic Probabilistic Price Decision System)
     // -------------------------------------------------------------
     else if (state == CustomerState::AT_SHELF) {
+        if (speechBubbleTimer > 0.0f) speechBubbleTimer -= deltaTime;
+        if (speechCooldown > 0.0f) speechCooldown -= deltaTime;
+
         waitTimer += deltaTime;
 
-        // Price Sensitivity Check (Tahap 14)
-        if (type == CustomerType::PRICE_SENSITIVE && !penaltyPriceTooHighApplied) {
+        if (waitTimer >= maxWaitDuration) {
+            // Evaluate price dynamically
             int curPrice = PriceManager::Instance().GetSellPrice(currentTargetProduct);
-            int basePrice = GetProductInfo(currentTargetProduct).sellPrice; // Standard reference price
+            float markup = PriceManager::Instance().GetMarkupPercent(currentTargetProduct);
 
-            // If store sells > 35% above standard baseline, customer refuses to buy!
-            if (curPrice > basePrice * 1.35f) {
-                penaltyPriceTooHighApplied = true;
-                satisfaction = std::clamp(satisfaction - 25, 0, 100);
-                specificFeedback = "Harga " + GetProductInfo(currentTargetProduct).name + " terlalu mahal!";
-                // Skip to next item or leave
+            // Calculate base purchase probability based on price markup
+            float buyChance = 0.95f; // 95% base chance at reference price
+
+            if (markup <= -20.0f) {
+                buyChance = 1.00f; // Great discount -> 100%
+            } else if (markup <= -5.0f) {
+                buyChance = 0.98f; // Below market -> 98%
+            } else if (markup <= 10.0f) {
+                buyChance = 0.92f; // Normal / fair -> 92%
+            } else if (markup <= 25.0f) {
+                buyChance = 0.78f; // Slight markup -> 78%
+            } else if (markup <= 45.0f) {
+                buyChance = 0.55f; // Moderate markup -> 55%
+            } else if (markup <= 75.0f) {
+                buyChance = 0.28f; // High markup -> 28%
+            } else if (markup <= 100.0f) {
+                buyChance = 0.12f; // Very expensive -> 12%
+            } else {
+                buyChance = 0.03f; // Ridiculously expensive -> 3%
+            }
+
+            // Customer Type Sensitivities
+            switch (type) {
+                case CustomerType::PRICE_SENSITIVE:
+                    if (markup > 5.0f) buyChance *= 0.55f;
+                    if (markup > 30.0f) buyChance *= 0.30f;
+                    if (markup < 0.0f) buyChance = std::min(1.0f, buyChance + 0.1f);
+                    break;
+                case CustomerType::BIG_SHOPPER:
+                    if (markup > 0.0f && markup <= 25.0f) buyChance = std::min(0.95f, buyChance + 0.10f);
+                    if (markup > 50.0f) buyChance *= 0.70f;
+                    break;
+                case CustomerType::PATIENT:
+                    if (markup > 20.0f) buyChance *= 0.85f;
+                    break;
+                case CustomerType::IMPATIENT:
+                    if (markup > 40.0f) buyChance *= 0.60f;
+                    break;
+                case CustomerType::NORMAL:
+                default:
+                    break;
+            }
+
+            // Pseudo-random roll using customer id, item index, price, and time
+            int rollSeed = (id * 37 + (int)currentShoppingItemIndex * 19 + curPrice + (int)(GetTime() * 10.0f)) % 100;
+            float roll = (float)rollSeed / 100.0f;
+
+            if (roll <= buyChance) {
+                // DECISION: BUY
+                state = CustomerState::TAKING_PRODUCT;
+
+                // Friendly buying dialogue
+                const std::vector<std::string> buyDialogues = {
+                    "Oke, aku ambil.",
+                    "Yang ini jadi.",
+                    "Kayaknya cocok.",
+                    "Aku beli ini.",
+                    "Ini masuk keranjang.",
+                    "Bagus, harganya pas."
+                };
+                Say(buyDialogues[(id + rollSeed) % buyDialogues.size()], 2.5f, Color{ 235, 255, 240, 245 }, Color{ 20, 100, 40, 255 });
+
+                // Satisfaction adjustments
+                if (markup < -10.0f) {
+                    satisfaction = std::min(100, satisfaction + 5);
+                } else if (markup > 35.0f) {
+                    satisfaction = std::max(20, satisfaction - 8);
+                }
+            } else {
+                // DECISION: REFUSE (Too expensive / not worth it)
+                const std::vector<std::string> refuseDialogues = {
+                    "Harganya terlalu mahal.",
+                    "Kayaknya kemahalan.",
+                    "Aku cari yang lebih murah.",
+                    "Harganya di luar budget.",
+                    "Kalau segini aku nggak jadi beli.",
+                    "Lebih baik cari produk lain.",
+                    "Hmm... kemahalan deh.",
+                    "Budget-ku nggak cukup buat ini."
+                };
+                Say(refuseDialogues[(id + rollSeed) % refuseDialogues.size()], 3.0f, Color{ 255, 235, 235, 245 }, Color{ 180, 40, 40, 255 });
+
+                if (!penaltyPriceTooHighApplied) {
+                    satisfaction = std::clamp(satisfaction - 15, 0, 100);
+                    penaltyPriceTooHighApplied = true;
+                    specificFeedback = "Harga " + GetProductInfo(currentTargetProduct).name + " terlalu mahal!";
+                }
+
+                // Skip to next item
                 currentShoppingItemIndex++;
                 state = CustomerState::BROWSING;
-                return;
             }
-        }
-
-        if (waitTimer >= maxWaitDuration) {
-            state = CustomerState::TAKING_PRODUCT;
         }
     }
     // -------------------------------------------------------------
     // State 6: TAKING_PRODUCT
     // -------------------------------------------------------------
     else if (state == CustomerState::TAKING_PRODUCT) {
+        if (speechBubbleTimer > 0.0f) speechBubbleTimer -= deltaTime;
+        if (speechCooldown > 0.0f) speechCooldown -= deltaTime;
+
         auto& racks = shop.GetRacks();
         bool gotProduct = false;
 
@@ -491,18 +634,16 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
         }
 
         if (gotProduct) {
-            // Check if current item still needs more units or proceed to next
             if (shoppingList[currentShoppingItemIndex].acquiredQuantity >= shoppingList[currentShoppingItemIndex].desiredQuantity) {
                 currentShoppingItemIndex++;
             }
-            // Return to BROWSING state to check remaining items
             state = CustomerState::BROWSING;
         } else {
-            // Stock ran out while walking there -> Mark penalty & proceed
             if (!penaltyNoStockApplied) {
                 satisfaction = std::clamp(satisfaction - 10, 0, 100);
                 penaltyNoStockApplied = true;
             }
+            Say("Eh, baru saja habis barangnya.", 2.5f);
             currentShoppingItemIndex++;
             state = CustomerState::BROWSING;
         }
@@ -511,6 +652,9 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
     // State 7: GOING_TO_CASHIER
     // -------------------------------------------------------------
     else if (state == CustomerState::GOING_TO_CASHIER) {
+        if (speechBubbleTimer > 0.0f) speechBubbleTimer -= deltaTime;
+        if (speechCooldown > 0.0f) speechCooldown -= deltaTime;
+
         Vector3 queueSlot = shop.GetCashier().GetQueuePosition(queueIndex);
         if (!waypoints.empty()) {
             waypoints.back() = queueSlot;
@@ -530,9 +674,19 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
                 state = CustomerState::PAYING;
                 payTimer = 0.0f;
                 rotationY = PI / 2.0f; // Face cashier counter
+                const std::vector<std::string> payGreetings = {
+                    "Totalnya berapa?",
+                    "Ini uangnya ya.",
+                    "Mau bayar belanjaan ini.",
+                    "Tolong hitung ya kasir."
+                };
+                Say(payGreetings[id % payGreetings.size()], 2.5f);
             } else {
                 state = CustomerState::WAITING_FOR_CASHIER;
                 rotationY = PI; // Face forward in line
+                if (queueIndex >= 2 && speechCooldown <= 0.0f) {
+                    Say("Antreannya lumayan ramai ya.", 2.5f);
+                }
             }
         }
     }
@@ -540,6 +694,9 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
     // State 8: WAITING_FOR_CASHIER
     // -------------------------------------------------------------
     else if (state == CustomerState::WAITING_FOR_CASHIER) {
+        if (speechBubbleTimer > 0.0f) speechBubbleTimer -= deltaTime;
+        if (speechCooldown > 0.0f) speechCooldown -= deltaTime;
+
         totalQueueWaitTime += deltaTime;
 
         // Waiting time penalties scaled with patience multiplier (Tahap 14)
@@ -550,6 +707,7 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
         if (totalQueueWaitTime > scaled20s && !penaltyWaitLongApplied) {
             satisfaction = std::clamp(satisfaction - 15, 0, 100);
             penaltyWaitLongApplied = true;
+            Say("Aduh, kasirnya lama sekali...", 3.0f, Color{ 255, 230, 220, 245 }, Color{ 180, 50, 30, 255 });
         } else if (totalQueueWaitTime > scaled10s && !penaltyWaitMidApplied) {
             satisfaction = std::clamp(satisfaction - 10, 0, 100);
             penaltyWaitMidApplied = true;
@@ -564,6 +722,7 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
             specificFeedback = "Antrean kasir keterlaluan lambat! Saya batalkan belanja!";
             state = CustomerState::LEAVING;
             BuildExitWaypoints(position);
+            Say("Nggak tahan antrenya! Aku pergi saja!", 3.5f, Color{ 255, 220, 220, 245 }, Color{ 200, 30, 30, 255 });
             return;
         }
 
@@ -579,12 +738,16 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
             state = CustomerState::PAYING;
             payTimer = 0.0f;
             rotationY = PI / 2.0f;
+            Say("Akhirnya giliran saya.", 2.2f);
         }
     }
     // -------------------------------------------------------------
     // State 9: PAYING (Processes entire cart at register)
     // -------------------------------------------------------------
     else if (state == CustomerState::PAYING) {
+        if (speechBubbleTimer > 0.0f) speechBubbleTimer -= deltaTime;
+        if (speechCooldown > 0.0f) speechCooldown -= deltaTime;
+
         payTimer += deltaTime;
 
         // Payment duration scaled slightly with item count (1.2s + 0.3s per item)
@@ -609,6 +772,16 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
                     satisfaction = std::clamp(satisfaction + 10, 0, 100);
                     bonusPaymentSuccess = true;
                 }
+
+                // Random thank you checkout dialogue
+                const std::vector<std::string> afterPay = {
+                    "Terima kasih banyak!",
+                    "Sudah pas ya uangnya.",
+                    "Terima kasih, sampai jumpa.",
+                    "Pelayanan bagus, makasih!",
+                    "Belanja selesai, terima kasih!"
+                };
+                Say(afterPay[(id + totalCartAmount) % afterPay.size()], 3.0f, Color{ 235, 255, 245, 245 }, Color{ 20, 120, 50, 255 });
             }
 
             state = CustomerState::LEAVING;
@@ -619,6 +792,9 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
     // State 10 & 11: LEAVING & EXITING
     // -------------------------------------------------------------
     else if (state == CustomerState::LEAVING || state == CustomerState::EXITING) {
+        if (speechBubbleTimer > 0.0f) speechBubbleTimer -= deltaTime;
+        if (speechCooldown > 0.0f) speechCooldown -= deltaTime;
+
         if (currentWaypointIndex < waypoints.size()) {
             Vector3 targetWp = waypoints[currentWaypointIndex];
             MoveTowards(targetWp, deltaTime);
@@ -718,3 +894,56 @@ void Customer::Render() {
                               hasPaid ? Color{ 50, 205, 50, 255 } : Color{ 100, 180, 255, 255 };
     DrawCube(tagPos, 0.12f, 0.12f, 0.12f, statusMarkerColor);
 }
+
+void Customer::RenderSpeechBubble() {
+    // 3D Billboard stub if needed
+}
+
+void Customer::RenderSpeechBubble2D(Camera3D camera, int screenWidth, int screenHeight) {
+    if (state == CustomerState::DESPAWNED || speechBubbleTimer <= 0.0f || speechBubbleText.empty()) {
+        return;
+    }
+
+    // Position above NPC head
+    Vector3 headWorldPos = { position.x, position.y + (1.75f * heightScale) + 0.45f, position.z };
+    Vector2 screenPos = GetWorldToScreen(headWorldPos, camera);
+
+    // Only render if in front of camera and within visible bounds
+    if (screenPos.x < -100 || screenPos.x > screenWidth + 100 || screenPos.y < -100 || screenPos.y > screenHeight + 100) {
+        return;
+    }
+
+    // Measure text
+    int fontSize = 13;
+    int textWidth = MeasureText(speechBubbleText.c_str(), fontSize);
+    int bubbleWidth = textWidth + 24;
+    int bubbleHeight = 28;
+
+    int bx = (int)screenPos.x - (bubbleWidth / 2);
+    int by = (int)screenPos.y - bubbleHeight - 8;
+
+    // Fade out during last 0.5 seconds
+    float alpha = (speechBubbleTimer < 0.5f) ? (speechBubbleTimer / 0.5f) : 1.0f;
+    Color bg = speechBubbleColor;
+    bg.a = (unsigned char)(240 * alpha);
+    Color border = speechTextColor;
+    border.a = (unsigned char)(220 * alpha);
+    Color textCol = speechTextColor;
+    textCol.a = (unsigned char)(255 * alpha);
+
+    // Draw speech bubble background & outline
+    DrawRectangle(bx, by, bubbleWidth, bubbleHeight, bg);
+    DrawRectangleLines(bx, by, bubbleWidth, bubbleHeight, border);
+
+    // Draw bubble pointer arrow pointing down to NPC
+    Vector2 p1 = { (float)screenPos.x - 5, (float)(by + bubbleHeight) };
+    Vector2 p2 = { (float)screenPos.x + 5, (float)(by + bubbleHeight) };
+    Vector2 p3 = { (float)screenPos.x, (float)(by + bubbleHeight + 7) };
+    DrawTriangle(p1, p2, p3, bg);
+    DrawLine((int)p1.x, (int)p1.y, (int)p3.x, (int)p3.y, border);
+    DrawLine((int)p2.x, (int)p2.y, (int)p3.x, (int)p3.y, border);
+
+    // Draw dialogue text
+    DrawText(speechBubbleText.c_str(), bx + 12, by + 7, fontSize, textCol);
+}
+

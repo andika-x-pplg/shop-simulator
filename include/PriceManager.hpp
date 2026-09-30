@@ -22,6 +22,14 @@ public:
     bool SetSellPrice(ProductType type, int newPrice, std::string& outFeedback);
     void AdjustSellPrice(ProductType type, int delta);
 
+    // Dynamic Percentage & Reference Pricing
+    int GetReferencePrice(ProductType type) const;
+    float GetMarkupPercent(ProductType type) const;
+    void SetMarkupPercent(ProductType type, float percent);
+    void AdjustMarkupPercent(ProductType type, float deltaPercent);
+    std::string GetPriceStatusLabel(ProductType type) const;
+    Color GetPriceStatusColor(ProductType type) const;
+
     // Supplier Buy Prices (Constant/Fixed from supplier)
     int GetBuyPrice(ProductType type) const;
 

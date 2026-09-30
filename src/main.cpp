@@ -535,7 +535,7 @@ int main() {
                     audioMgr.PlayEvent(SoundEvent::CLICK);
                 }
 
-                // Quick Increment / Decrement
+                // Quick Increment / Decrement (Fixed +-Rp500)
                 if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) {
                     ProductType curType = priceMgr.GetSelectedProductType();
                     priceMgr.AdjustSellPrice(curType, 500);
@@ -557,8 +557,82 @@ int main() {
                     audioMgr.PlayEvent(SoundEvent::CLICK);
                 }
 
+                // Percentage Markup Adjust (+-5% with Q / E)
+                if (IsKeyPressed(KEY_E)) {
+                    ProductType curType = priceMgr.GetSelectedProductType();
+                    priceMgr.AdjustMarkupPercent(curType, 5.0f);
+                    std::string fb;
+                    priceMgr.SetSellPrice(curType, priceMgr.GetSellPrice(curType), fb);
+                    topNotice = fb;
+                    topNoticeColor = { 46, 204, 113, 235 };
+                    topNoticeTimer = 3.0f;
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+                if (IsKeyPressed(KEY_Q)) {
+                    ProductType curType = priceMgr.GetSelectedProductType();
+                    priceMgr.AdjustMarkupPercent(curType, -5.0f);
+                    std::string fb;
+                    priceMgr.SetSellPrice(curType, priceMgr.GetSellPrice(curType), fb);
+                    topNotice = fb;
+                    topNoticeColor = { 241, 196, 15, 235 };
+                    topNoticeTimer = 3.0f;
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+
+                // Preset Markup jumps with 1, 2, 3, 4, 5 (0%, +10%, +25%, +50%, +100%)
+                if (IsKeyPressed(KEY_ONE)) {
+                    ProductType curType = priceMgr.GetSelectedProductType();
+                    priceMgr.SetMarkupPercent(curType, 0.0f);
+                    std::string fb;
+                    priceMgr.SetSellPrice(curType, priceMgr.GetSellPrice(curType), fb);
+                    topNotice = fb;
+                    topNoticeColor = { 40, 120, 200, 235 };
+                    topNoticeTimer = 3.0f;
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+                if (IsKeyPressed(KEY_TWO)) {
+                    ProductType curType = priceMgr.GetSelectedProductType();
+                    priceMgr.SetMarkupPercent(curType, 10.0f);
+                    std::string fb;
+                    priceMgr.SetSellPrice(curType, priceMgr.GetSellPrice(curType), fb);
+                    topNotice = fb;
+                    topNoticeColor = { 40, 120, 200, 235 };
+                    topNoticeTimer = 3.0f;
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+                if (IsKeyPressed(KEY_THREE)) {
+                    ProductType curType = priceMgr.GetSelectedProductType();
+                    priceMgr.SetMarkupPercent(curType, 25.0f);
+                    std::string fb;
+                    priceMgr.SetSellPrice(curType, priceMgr.GetSellPrice(curType), fb);
+                    topNotice = fb;
+                    topNoticeColor = { 40, 120, 200, 235 };
+                    topNoticeTimer = 3.0f;
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+                if (IsKeyPressed(KEY_FOUR)) {
+                    ProductType curType = priceMgr.GetSelectedProductType();
+                    priceMgr.SetMarkupPercent(curType, 50.0f);
+                    std::string fb;
+                    priceMgr.SetSellPrice(curType, priceMgr.GetSellPrice(curType), fb);
+                    topNotice = fb;
+                    topNoticeColor = { 40, 120, 200, 235 };
+                    topNoticeTimer = 3.0f;
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+                if (IsKeyPressed(KEY_FIVE)) {
+                    ProductType curType = priceMgr.GetSelectedProductType();
+                    priceMgr.SetMarkupPercent(curType, 100.0f);
+                    std::string fb;
+                    priceMgr.SetSellPrice(curType, priceMgr.GetSellPrice(curType), fb);
+                    topNotice = fb;
+                    topNoticeColor = { 231, 76, 60, 235 };
+                    topNoticeTimer = 3.0f;
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+
                 // Enter Direct Price Input Mode
-                if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_E)) {
+                if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                     priceMgr.StartEditingPrice();
                     audioMgr.PlayEvent(SoundEvent::CLICK);
                 }
@@ -869,6 +943,11 @@ int main() {
                 player.RenderHeldItem();
             EndMode3D();
 
+            // Render 2D Overhead Speech Bubbles for Customers
+            for (auto& cust : customers) {
+                cust.RenderSpeechBubble2D(player.GetCamera(), screenWidth, screenHeight);
+            }
+
             // 2D HUD / UI Rendering
             // Top-Left Controls & Status Box
             DrawRectangle(15, 15, 345, 410, { 15, 20, 25, 230 });
@@ -1170,28 +1249,30 @@ int main() {
             if (priceMgr.IsMenuOpen()) {
                 DrawRectangle(0, 0, screenWidth, screenHeight, { 0, 0, 0, 160 });
 
-                int modalW = 720;
-                int modalH = 510;
+                int modalW = 760;
+                int modalH = 530;
                 int modalX = (screenWidth - modalW) / 2;
                 int modalY = (screenHeight - modalH) / 2;
 
                 DrawRectangle(modalX, modalY, modalW, modalH, { 25, 30, 42, 250 });
                 DrawRectangleLines(modalX, modalY, modalW, modalH, { 41, 128, 185, 255 });
 
-                DrawText("MANAJEMEN PRODUK & HARGA JUAL TOKO", modalX + 30, modalY + 16, 20, { 100, 220, 255, 255 });
-                DrawText("Atur harga jual & analisis performa per produk (Best Seller, Laba Bersih & Popularitas)", modalX + 30, modalY + 40, 12, { 180, 195, 210, 255 });
+                DrawText("MANAJEMEN HARGA JUAL & RESPON PELANGGAN", modalX + 30, modalY + 16, 19, { 100, 220, 255, 255 });
+                DrawText("Atur harga berdasarkan persentase markup terhadap harga pasar wajar (Mempengaruhi probabilitas beli NPC)", modalX + 30, modalY + 38, 11, { 180, 195, 210, 255 });
 
                 const auto& prods = priceMgr.GetManagedProducts();
                 int curSel = priceMgr.GetSelectedProductIndex();
                 int visibleCount = 3;
                 int startIdx = std::max(0, std::min((int)prods.size() - visibleCount, curSel - 1));
 
-                int listY = modalY + 62;
+                int listY = modalY + 60;
                 for (int i = startIdx; i < startIdx + visibleCount && i < (int)prods.size(); ++i) {
                     ProductType pType = prods[i];
                     ProductInfo info = GetProductInfo(pType);
                     int sellPrice = priceMgr.GetSellPrice(pType);
                     int buyPrice = priceMgr.GetBuyPrice(pType);
+                    int refPrice = priceMgr.GetReferencePrice(pType);
+                    float markup = priceMgr.GetMarkupPercent(pType);
                     int margin = priceMgr.GetUnitMargin(pType);
                     const auto& stats = priceMgr.GetProductStats(pType);
 
@@ -1200,50 +1281,59 @@ int main() {
                     Color itemBg = isSelected ? Color{ 35, 65, 95, 240 } : Color{ 30, 36, 45, 200 };
                     Color itemBorder = isSelected ? Color{ 0, 220, 255, 255 } : Color{ 55, 65, 75, 255 };
 
-                    DrawRectangle(modalX + 30, listY, modalW - 60, 92, itemBg);
-                    DrawRectangleLines(modalX + 30, listY, modalW - 60, 92, itemBorder);
+                    DrawRectangle(modalX + 25, listY, modalW - 50, 96, itemBg);
+                    DrawRectangleLines(modalX + 25, listY, modalW - 50, 96, itemBorder);
 
-                    DrawRectangle(modalX + 45, listY + 15, 48, 48, info.primaryColor);
-                    DrawRectangleLines(modalX + 45, listY + 15, 48, 48, RAYWHITE);
-                    DrawText(info.sku.c_str(), modalX + 47, listY + 32, 9, RAYWHITE);
+                    DrawRectangle(modalX + 38, listY + 14, 46, 46, info.primaryColor);
+                    DrawRectangleLines(modalX + 38, listY + 14, 46, 46, RAYWHITE);
+                    DrawText(info.sku.c_str(), modalX + 40, listY + 30, 9, RAYWHITE);
 
                     std::string pTitle = "[" + info.sku + "] " + info.name + " (" + GetCategoryName(info.category) + ")" + (isSelected ? "  [DIPILIH]" : "");
-                    DrawText(pTitle.c_str(), modalX + 105, listY + 10, 15, isSelected ? Color{ 255, 230, 100, 255 } : RAYWHITE);
+                    DrawText(pTitle.c_str(), modalX + 95, listY + 10, 14, isSelected ? Color{ 255, 230, 100, 255 } : RAYWHITE);
 
-                    std::string modalLine = "Modal: Rp" + std::to_string(buyPrice) +
-                                            "  |  Jual: Rp" + std::to_string(sellPrice) +
-                                            "  |  Margin: " + (margin >= 0 ? ("+Rp" + std::to_string(margin)) : ("-Rp" + std::to_string(-margin)));
-                    Color marginColor = (margin >= 0) ? Color{ 50, 255, 120, 255 } : Color{ 255, 80, 80, 255 };
-                    DrawText(modalLine.c_str(), modalX + 105, listY + 30, 13, marginColor);
+                    // Pricing breakdown: Modal, Pasar/Ref, Jual, Markup %, Status
+                    std::string priceLine = "Modal: Rp" + std::to_string(buyPrice) +
+                                            "  |  Pasar: Rp" + std::to_string(refPrice) +
+                                            "  |  Jual: Rp" + std::to_string(sellPrice);
+                    DrawText(priceLine.c_str(), modalX + 95, listY + 28, 12, { 220, 230, 240, 255 });
 
+                    // Markup badge & Profit
+                    char markupStr[64];
+                    std::snprintf(markupStr, sizeof(markupStr), "Markup: %+.1f%%", markup);
+                    Color statusCol = priceMgr.GetPriceStatusColor(pType);
+                    std::string statusTag = "[" + priceMgr.GetPriceStatusLabel(pType) + "]";
+
+                    std::string marginText = "Profit/Unit: " + (margin >= 0 ? ("+Rp" + std::to_string(margin)) : ("-Rp" + std::to_string(-margin)));
+                    DrawText(marginText.c_str(), modalX + 95, listY + 46, 12, (margin >= 0 ? Color{ 50, 255, 120, 255 } : Color{ 255, 80, 80, 255 }));
+                    DrawText(markupStr, modalX + 275, listY + 46, 12, statusCol);
+                    DrawText(statusTag.c_str(), modalX + 395, listY + 46, 12, statusCol);
+
+                    // Sales Stats
                     std::string statLine = "Terjual: " + std::to_string(stats.totalSold) + " unit | Omset: Rp" + std::to_string(stats.totalRevenue) +
-                                           " | Profit: Rp" + std::to_string(stats.totalProfit) + " | Pop: " + priceMgr.GetPopularityLevel(pType);
-                    DrawText(statLine.c_str(), modalX + 105, listY + 50, 12, { 255, 215, 0, 255 });
-
-                    std::string stockLine = "Stok Rak: " + std::to_string(shop.GetProductStockOnShelves(pType)) +
-                                            " | Stok Gudang: " + std::to_string(shop.GetStorage().GetStock(pType));
-                    DrawText(stockLine.c_str(), modalX + 105, listY + 68, 11, { 180, 210, 235, 255 });
+                                           " | Laba: Rp" + std::to_string(stats.totalProfit) + " | Pop: " + priceMgr.GetPopularityLevel(pType);
+                    DrawText(statLine.c_str(), modalX + 95, listY + 66, 11, { 255, 215, 0, 255 });
 
                     if (isSelected) {
                         if (priceMgr.IsEditingPrice()) {
-                            DrawRectangle(modalX + modalW - 220, listY + 10, 185, 34, { 30, 45, 65, 255 });
-                            DrawRectangleLines(modalX + modalW - 220, listY + 10, 185, 34, { 0, 255, 200, 255 });
+                            DrawRectangle(modalX + modalW - 235, listY + 10, 195, 34, { 30, 45, 65, 255 });
+                            DrawRectangleLines(modalX + modalW - 235, listY + 10, 195, 34, { 0, 255, 200, 255 });
                             std::string inputShow = "Rp" + priceMgr.GetInputBuffer() + (((int)(GetTime() * 2.5f) % 2 == 0) ? "_" : " ");
-                            DrawText(inputShow.c_str(), modalX + modalW - 210, listY + 18, 14, { 50, 255, 150, 255 });
-                            DrawText("[ENTER] Simpan [ESC] Batal", modalX + modalW - 220, listY + 48, 10, { 200, 230, 255, 255 });
+                            DrawText(inputShow.c_str(), modalX + modalW - 225, listY + 18, 14, { 50, 255, 150, 255 });
+                            DrawText("[ENTER] Simpan [ESC] Batal", modalX + modalW - 235, listY + 48, 10, { 200, 230, 255, 255 });
                         } else {
-                            DrawText("[ENTER / E: Ubah Harga]", modalX + modalW - 200, listY + 10, 12, { 50, 255, 150, 255 });
-                            DrawText("[ < A / D > +-Rp500 ]", modalX + modalW - 200, listY + 28, 12, { 255, 215, 0, 255 });
+                            DrawText("[Q / E] Markup +-5%", modalX + modalW - 220, listY + 10, 12, { 50, 255, 180, 255 });
+                            DrawText("[A / D] Harga +-Rp500", modalX + modalW - 220, listY + 28, 12, { 255, 215, 0, 255 });
+                            DrawText("[ENTER] Ketik Manual", modalX + modalW - 220, listY + 46, 11, { 180, 210, 240, 255 });
                         }
                     }
 
-                    listY += 98;
+                    listY += 102;
                 }
 
-                // Summary of Best Seller & Slow Seller at bottom
-                int statBoxY = modalY + 360;
-                DrawRectangle(modalX + 30, statBoxY, modalW - 60, 95, { 18, 22, 28, 240 });
-                DrawRectangleLines(modalX + 30, statBoxY, modalW - 60, 95, { 60, 75, 90, 255 });
+                // Preset Buttons hint & summary
+                int statBoxY = modalY + 372;
+                DrawRectangle(modalX + 25, statBoxY, modalW - 50, 95, { 18, 22, 28, 240 });
+                DrawRectangleLines(modalX + 25, statBoxY, modalW - 50, 95, { 60, 75, 90, 255 });
 
                 ProductType bestType = priceMgr.GetBestSeller();
                 ProductType slowType = priceMgr.GetSlowSeller();
@@ -1253,17 +1343,17 @@ int main() {
                 std::string slowName = (slowType != ProductType::NONE) ? 
                     (GetProductInfo(slowType).name + " (" + std::to_string(priceMgr.GetProductStats(slowType).totalSold) + " unit)") : "Belum ada";
 
-                DrawText("RINGKASAN PERFORMA PENJUALAN:", modalX + 45, statBoxY + 10, 13, { 100, 220, 255, 255 });
-                DrawText(("BEST SELLER : " + bestName).c_str(), modalX + 45, statBoxY + 32, 13, { 50, 255, 120, 255 });
-                DrawText(("SLOW SELLER : " + slowName).c_str(), modalX + 45, statBoxY + 52, 13, { 255, 160, 100, 255 });
-                DrawText(("Item terpilih: " + std::to_string(curSel + 1) + " / " + std::to_string(prods.size())).c_str(), modalX + 45, statBoxY + 72, 11, { 180, 190, 200, 255 });
+                DrawText("PRESET CEPAT HARGA: [1] 0% (Wajar) | [2] +10% | [3] +25% | [4] +50% | [5] +100%", modalX + 40, statBoxY + 10, 12, { 100, 220, 255, 255 });
+                DrawText(("BEST SELLER : " + bestName).c_str(), modalX + 40, statBoxY + 32, 12, { 50, 255, 120, 255 });
+                DrawText(("SLOW SELLER : " + slowName).c_str(), modalX + 40, statBoxY + 52, 12, { 255, 160, 100, 255 });
+                DrawText(("Item terpilih: " + std::to_string(curSel + 1) + " / " + std::to_string(prods.size())).c_str(), modalX + 40, statBoxY + 72, 11, { 180, 190, 200, 255 });
 
                 if (priceMgr.IsEditingPrice()) {
                     DrawText("MODE KETIK HARGA: Ketik Angka [0-9] | [BACKSPACE] Hapus | [ENTER] Simpan | [ESC] Batal",
-                             modalX + 45, modalY + 478, 12, { 50, 255, 150, 255 });
+                             modalX + 40, modalY + 495, 12, { 50, 255, 150, 255 });
                 } else {
-                    DrawText("[W / S] Pilih Produk    [ENTER / E] Ketik Harga    [A / D] +-Rp500    [P / ESC] Tutup",
-                             modalX + 45, modalY + 478, 12, { 255, 220, 120, 255 });
+                    DrawText("[W / S] Pilih    [Q / E] +-5% Markup    [A / D] +-Rp500    [1-5] Preset    [P / ESC] Tutup",
+                             modalX + 40, modalY + 495, 12, { 255, 220, 120, 255 });
                 }
             }
 
