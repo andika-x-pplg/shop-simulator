@@ -337,6 +337,41 @@ shop-simulator/
 │   ├── ShopUpgrade.hpp # Sistem upgrade toko berlevel (size, shelf, storage, customer capacity)
 │   ├── Storage.hpp     # Class Storage (pallet kayu 3D, kapasitas dinamis & stok gudang)
 │   └── Supplier.hpp    # Class Supplier (katalog produk supplier, order queue & delivery timer)
+## Fitur Tahap 13 (Final Testing, Optimization & Final Release Build)
+- **Full Acceptance & Stability Verification**: 100% lulus seluruh skenario pengujian gameplay multi-hari (Day 1 hingga Day 3+), siklus toko buka/tutup, pengadaan supplier, manajemen harga, rating customer, upgrade toko, dan furniture.
+- **Save/Load Integrity**: Serialisasi JSON (`save/savegame.json`) telah diuji dengan New Game, Quick Save (F5), Quick Load (F9), dan Slot Menu.
+- **Resource Management & Performance**: Zero memory leak pada entity lifecycle customer/order delivery, procedural audio fallback aman tanpa ketergantungan file eksternal, render primitive batch optimal pada 60 FPS terkunci.
+- **Release Directory Packaging**: Folder mandiri `release/` yang berisi `ShopSimulator.exe`, aset, dan panduan `README.txt` siap distribusi langsung.
+
+## Struktur Direktori Proyek
+
+```
+shop-simulator/
+├── CMakeLists.txt      # Konfigurasi build CMake & FetchContent raylib 5.0
+├── README.md           # Dokumentasi lengkap proyek & kontrol
+├── release/            # Paket Final Release siap distribusi
+│   ├── ShopSimulator.exe # Executable rilis final
+│   ├── README.txt      # Panduan instalasi & kontrol pemain
+│   └── assets/         # Folder aset permainan
+├── include/            # C++ Header files
+│   ├── AudioManager.hpp# Audio manager & procedural waveform generator
+│   ├── Cashier.hpp     # Deklarasi Kasir 3D, NPC kasir & POS machine
+│   ├── Common.hpp      # Struktur AABB, ProductType, dan Enum umum
+│   ├── Customer.hpp    # State machine AI Customer, antrean & kepuasan
+│   ├── DailyStats.hpp  # Agregator statistik harian & modal ringkasan
+│   ├── Finance.hpp     # Saldo toko, riwayat transaksi & penghitungan profit
+│   ├── Furniture.hpp   # Furniture 3D, peralatan toko & equipment bonuses
+│   ├── GameTime.hpp    # Sistem jam/hari (08:00 - 21:00) & warna langit
+│   ├── Player.hpp      # Player controller, first-person camera & held item
+│   ├── PriceManager.hpp# Penentuan harga jual, modal supplier & margin
+│   ├── Product.hpp     # Definisi item (Minuman, Roti, Makanan Kaleng)
+│   ├── Rack.hpp        # Rak 3D, kapasitas stok bertingkat & visual produk
+│   ├── Reputation.hpp  # Reputasi toko (0-100), rating bintang (1-5) & ulasan
+│   ├── SaveSystem.hpp  # Serialisasi JSON, verifikasi data & Game Menu
+│   ├── Shop.hpp        # Arsitektur toko 3D, lampu atap & sistem storage
+│   ├── ShopUpgrade.hpp # Upgrade fasilitas toko (4 kategori bertingkat)
+│   ├── Storage.hpp     # Pallet penyimpanan 3D & stok cadangan gudang
+│   └── Supplier.hpp    # Sistem pemesanan supplier & countdown delivery
 ├── src/                # C++ Source files
 │   ├── AudioManager.cpp# Implementasi sintesis SFX procedural & volume routing
 │   ├── Cashier.cpp     # Render kasir 3D, NPC kasir berseragam, mesin register & pembayaran
@@ -383,6 +418,8 @@ cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release "-DCMAKE_POLICY_VERSION_MIN
 # 2. Build executable
 cmake --build build --config Release
 
-# 3. Jalankan game
+# 3. Jalankan game dari build atau release folder
 .\build\ShopSimulator.exe
+# atau
+.\release\ShopSimulator.exe
 ```

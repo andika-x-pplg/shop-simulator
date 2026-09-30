@@ -25,7 +25,7 @@ int main() {
     const int screenHeight = 720;
     
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
-    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Tahap 12: Polish (UI, Audio, Visuals & Balancing)");
+    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Final Release");
 
     SetTargetFPS(60);
 
@@ -786,7 +786,7 @@ int main() {
             DrawRectangle(15, 15, 345, 410, { 15, 20, 25, 230 });
             DrawRectangleLines(15, 15, 345, 410, { 70, 85, 100, 255 });
 
-            DrawText("SHOP SIMULATOR 3D (Tahap 12 Polish)", 25, 23, 16, { 255, 215, 0, 255 });
+            DrawText("SHOP SIMULATOR 3D (Final Release)", 25, 23, 16, { 255, 215, 0, 255 });
             
             // Time & Shop Open/Closed Banner (Tahap 10)
             std::string timeHud = gameTime.GetDayString() + "  |  " + gameTime.GetFormattedTime();
