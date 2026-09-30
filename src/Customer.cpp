@@ -904,10 +904,20 @@ void Customer::RenderSpeechBubble2D(Camera3D camera, int screenWidth, int screen
 
     // Position above NPC head
     Vector3 headWorldPos = { position.x, position.y + (1.75f * heightScale) + 0.45f, position.z };
+
+    // Check if NPC is in front of the camera (forward dot product)
+    Vector3 camForward = Vector3Subtract(camera.target, camera.position);
+    Vector3 toNpc = Vector3Subtract(headWorldPos, camera.position);
+    float dot = (camForward.x * toNpc.x) + (camForward.y * toNpc.y) + (camForward.z * toNpc.z);
+    if (dot <= 0.2f) {
+        // NPC is behind the camera or directly beside -> DO NOT RENDER
+        return;
+    }
+
     Vector2 screenPos = GetWorldToScreen(headWorldPos, camera);
 
-    // Only render if in front of camera and within visible bounds
-    if (screenPos.x < -100 || screenPos.x > screenWidth + 100 || screenPos.y < -100 || screenPos.y > screenHeight + 100) {
+    // Only render if within visible screen bounds
+    if (screenPos.x < 0 || screenPos.x > screenWidth || screenPos.y < 0 || screenPos.y > screenHeight) {
         return;
     }
 
