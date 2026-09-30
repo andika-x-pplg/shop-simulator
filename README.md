@@ -210,6 +210,45 @@ Game simulasi toko 3D modern berbasis C++17 dan raylib 5.0 tanpa game engine ber
   - Banner feedback pembelian dan upgrade (*"Upgrade Berhasil!"*, *"Furniture Berhasil Dibeli!"*, *"Saldo tidak cukup!"*, *"Sudah MAX LEVEL"*).
   - HUD real-time menampilkan `Level Toko: Lv.X | Rak: Lv.X | Gudang: Lv.X`.
 
+## Fitur Tahap 10 (Sistem Hari, Waktu, Jam Buka/Tutup Toko & Statistik Harian)
+- **Sistem Waktu Game Berbasis DeltaTime (`GameTime.hpp`, `GameTime.cpp`)**:
+  - Skala waktu presisi: **1 detik waktu nyata = 1 menit waktu game** (independen dari variasi FPS).
+  - Format jam digital: `HH:MM` (misal `08:00`, `12:30`, `20:00`, `21:00`).
+  - Proteksi waktu: pergantian menit ke jam (`00 - 59`) tanpa nilai invalid.
+- **Sistem Hari Operasional Toko**:
+  - Dimulai dari **Day 1 (08:00)**.
+  - Memulai hari berikutnya setelah tutup toko: **Day 2 (08:00)** -> **Day 3 (08:00)**, dan seterusnya.
+- **Jam Buka & Tutup Toko**:
+  - **Jam Buka (OPEN)**: `08:00` (Status HUD: `STATUS TOKO: OPEN (08:00 - 21:00)` dengan warna hijau cerah).
+  - **Jam Tutup (CLOSED)**: `21:00` (Status HUD: `STATUS TOKO: CLOSED` dengan warna merah).
+  - **Pemberitahuan Waktu (Time Warnings)**:
+    - `20:00`: Notifikasi banner oranye *"1 jam lagi toko tutup (21:00)."* (Muncul tepat 1 kali).
+    - `20:30`: Notifikasi banner merah *"Toko akan segera tutup!"* (Muncul tepat 1 kali).
+    - `21:00`: Notifikasi penutupan *"Toko ditutup."* & aktivasi Daily Summary Modal.
+- **Customer Spawner & Behavior Saat Jam Tutup**:
+  - Customer baru **hanya boleh spawn saat status toko OPEN**.
+  - Saat toko CLOSED (`21:00`), customer baru dilarang masuk toko (`spawnTimer` dihentikan).
+  - Customer yang sudah berada di dalam toko **tetap diberi kesempatan menyelesaikan prosesnya dengan aman** (mencari barang, mengambil, mengantre kasir, dan membayar) tanpa terhapus tiba-tiba.
+- **Perubahan Visual Waktu / Visual Time Change**:
+  - **Morning (08:00 - 11:59)**: Warna langit biru cerah pagi (*Sky Blue*).
+  - **Day (12:00 - 17:59)**: Warna langit siang terang (*Bright Day Blue*).
+  - **Evening / Night (18:00 - 21:00)**: Warna langit sore/malam (*Dark Twilight*).
+- **Statistik Harian & Ringkasan Hari (`DailyStats.hpp`, `DailyStats.cpp`)**:
+  - Pemisahan data harian (*Daily*) dengan data akumulasi permanen (*Total*):
+    - `dailyRevenue`: Pendapatan kotor penjualan hari ini.
+    - `dailyExpenses`: Pengeluaran supplier / upgrade / furniture hari ini.
+    - `dailyProfit`: Keuntungan bersih hari ini (`Revenue - Expenses`).
+    - `dailyCustomers`: Jumlah customer yang berhasil dilayani hari ini.
+    - `dailyRatings`: Riwayat ulasan dan rata-rata rating kepuasan hari ini.
+  - **Daily Summary Modal**:
+    - Otomatis muncul pada pukul `21:00` menampilkan kartu metrik operasional hari tersebut.
+    - Menampilkan ringkasan ulasan customer dan saldo akhir toko.
+    - Menekan tombol `ENTER` / `SPASI` akan memulai hari berikutnya (Day bertambah 1, jam kembali ke 08:00, toko kembali OPEN, dan daily stats di-reset).
+  - **Integritas Ekonomi & Progres Permanen**:
+    - Reset harian **TIDAK PERNAH** menghapus saldo toko (`currentBalance`), total revenue/expenses permanen, upgrade toko, furniture/peralatan, harga jual produk, reputasi toko, maupun stok gudang/rak.
+- **Aktivitas Toko Saat CLOSED**:
+  - Pemain tetap leluasa bergerak, melakukan restock rak dari storage, memesan barang di supplier (timer delivery tetap berjalan normal), mengatur harga jual, serta membeli furniture/upgrade.
+
 ## Struktur Project
 ```text
 shop-simulator/
@@ -219,8 +258,10 @@ shop-simulator/
 │   ├── Cashier.hpp     # Class Cashier (counter 3D, NPC kasir, POS terminal, antrian, & transaksi)
 │   ├── Common.hpp      # Struktur matematika & AABB bounding box
 │   ├── Customer.hpp    # Class Customer (FSM, shopping, cashier queue, payment, satisfaction & rating)
+│   ├── DailyStats.hpp  # Pencatatan statistik harian & rendering modal daily summary
 │   ├── Finance.hpp     # Single source of truth keuangan (saldo, revenue, expenses, profit/loss)
 │   ├── Furniture.hpp   # Class Furniture & Equipment (render 3D, status kepemilikan, collider & bonus)
+│   ├── GameTime.hpp    # Sistem waktu (deltaTime), hari operasional, jam buka/tutup & sky visual
 │   ├── Player.hpp      # Controller first person, held item & feedback
 │   ├── PriceManager.hpp# Manajemen harga jual produk, validasi harga & margin unit
 │   ├── Product.hpp     # Definisi produk, harga jual, harga beli supplier, & visual
@@ -233,8 +274,10 @@ shop-simulator/
 ├── src/                # C++ Source files
 │   ├── Cashier.cpp     # Render kasir 3D, NPC kasir berseragam, mesin register & pembayaran
 │   ├── Customer.cpp    # Navigasi lorong, antrean kasir, checkout, scoring kepuasan & rating
+│   ├── DailyStats.cpp  # Implementasi agregasi statistik harian & render modal ringkasan harian
 │   ├── Finance.cpp     # Pencatatan transaksi pendapatan, pengeluaran & perhitungan profit
 │   ├── Furniture.cpp   # Render 3D furniture/equipment, collider generator & bonus logic
+│   ├── GameTime.cpp    # Perhitungan waktu 1s = 1m game, transisi hari, peringatan jam & sky
 │   ├── Player.cpp      # Pergerakan, first-person camera & render held item
 │   ├── PriceManager.cpp# Penyesuaian harga jual, validasi batas & kalkulasi margin
 │   ├── Rack.cpp        # Implementasi render rak bertingkat, batas kapasitas dinamis & visual produk
@@ -243,7 +286,7 @@ shop-simulator/
 │   ├── ShopUpgrade.cpp # Logika upgrade toko, validasi balance, & modal UI upgrade
 │   ├── Storage.cpp     # Render pallet gudang 3D, kapasitas maksimum & manajemen stok gudang
 │   ├── Supplier.cpp    # Pengadaan barang, countdown delivery & transfer stok otomatis ke gudang
-│   └── main.cpp        # Game loop, integrasi upgrade, furniture, modal UI (U/B/TAB/P/F/R), & HUD
+│   └── main.cpp        # Game loop, integrasi waktu, jam buka/tutup, modal UI (U/B/TAB/P/F/R/Summary), & HUD
 └── assets/             # Direktori aset (models, textures, sounds, fonts)
 ```
 
@@ -257,8 +300,7 @@ shop-simulator/
 - **P**: Buka / Tutup Menu Manajemen Harga Jual
 - **F**: Buka / Tutup Menu Ringkasan Keuangan Toko
 - **R**: Buka / Tutup Menu Reputasi & Rating Toko
-- **Panah / W, S, A, D**: Navigasi menu yang terbuka
-- **ENTER**: Beli Upgrade / Beli Item Furniture / Eksekusi Order Supplier
+- **ENTER / SPASI**: Memulai Hari Berikutnya (di Daily Summary) / Beli Item / Konfirmasi Order
 - **ESC**: Tutup Menu Aktif / Keluar dari game
 
 ## Cara Build & Menjalankan (Windows)

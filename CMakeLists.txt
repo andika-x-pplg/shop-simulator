@@ -35,6 +35,8 @@ set(SOURCES
     src/Reputation.cpp
     src/ShopUpgrade.cpp
     src/Furniture.cpp
+    src/GameTime.cpp
+    src/DailyStats.cpp
 )
 
 # Header files for IDE navigation
@@ -53,6 +55,8 @@ set(HEADERS
     include/Reputation.hpp
     include/ShopUpgrade.hpp
     include/Furniture.hpp
+    include/GameTime.hpp
+    include/DailyStats.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

@@ -10,6 +10,8 @@
 #include "Reputation.hpp"
 #include "ShopUpgrade.hpp"
 #include "Furniture.hpp"
+#include "GameTime.hpp"
+#include "DailyStats.hpp"
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -20,14 +22,14 @@ int main() {
     const int screenHeight = 720;
     
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
-    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Tahap 9: Shop Upgrade & Furniture System");
+    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Tahap 10: Day, Time & Shop Open/Closed System");
 
     SetTargetFPS(60);
 
     // Disable cursor for smooth first-person mouse controls
     DisableCursor();
 
-    // 2. Game Entities Initialization
+    // 2. Game Systems & Entities Initialization
     Shop shop;
     shop.Init();
 
@@ -53,14 +55,22 @@ int main() {
     Furniture furniture;
     furniture.Init();
 
+    // Day & Time System (Tahap 10)
+    GameTime gameTime;
+    gameTime.Init();
+
+    // Daily Statistics System (Tahap 10)
+    DailyStats dailyStats;
+    dailyStats.Init();
+
     Player player;
     // Spawn player in front of shop entrance
     player.Init({ 0.0f, 0.0f, 10.0f });
 
     // Transaction & Delivery Notification Banner
-    std::string topNotice = "";
-    float topNoticeTimer = 0.0f;
-    Color topNoticeColor = { 20, 120, 50, 230 };
+    std::string topNotice = "Toko dibuka! (Hari 1 - 08:00)";
+    float topNoticeTimer = 4.0f;
+    Color topNoticeColor = { 46, 204, 113, 235 };
 
     // 4. Customer NPC System Management
     std::vector<Customer> customers;
@@ -88,11 +98,16 @@ int main() {
     while (!WindowShouldClose()) {
         bool anyModalOpen = supplier.IsMenuOpen() || priceMgr.IsMenuOpen() || 
                              finance.IsMenuOpen() || reputation.IsMenuOpen() ||
-                             shopUpgrade.IsMenuOpen() || furniture.IsMenuOpen();
+                             shopUpgrade.IsMenuOpen() || furniture.IsMenuOpen() ||
+                             gameTime.IsDaySummaryOpen();
 
         // Exit or close modals on ESC
         if (IsKeyPressed(KEY_ESCAPE)) {
-            if (anyModalOpen) {
+            if (gameTime.IsDaySummaryOpen()) {
+                // Allow closing daily summary modal to explore shop during closed hours
+                gameTime.SetDaySummaryOpen(false);
+                DisableCursor();
+            } else if (anyModalOpen) {
                 supplier.SetMenuOpen(false);
                 priceMgr.SetMenuOpen(false);
                 finance.SetMenuOpen(false);
@@ -107,6 +122,40 @@ int main() {
 
         float deltaTime = GetFrameTime();
 
+        // Update Game Time & Check Warnings / Auto-close (Tahap 10)
+        std::string timeNotice = "";
+        Color timeNoticeCol = RAYWHITE;
+        gameTime.Update(deltaTime, timeNotice, timeNoticeCol);
+        if (!timeNotice.empty()) {
+            topNotice = timeNotice;
+            topNoticeColor = timeNoticeCol;
+            topNoticeTimer = 4.0f;
+            if (gameTime.IsDaySummaryOpen()) {
+                EnableCursor();
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Daily Summary Modal Handling (Tahap 10)
+        // -------------------------------------------------------------
+        if (gameTime.IsDaySummaryOpen()) {
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                // Advance to Next Day
+                std::string nextDayNotice;
+                Color nextDayCol;
+                gameTime.StartNextDay(nextDayNotice, nextDayCol);
+                dailyStats.ResetDaily();
+
+                topNotice = nextDayNotice;
+                topNoticeColor = nextDayCol;
+                topNoticeTimer = 4.0f;
+
+                // Reset customer spawn timer for the fresh day
+                spawnTimer = 2.0f;
+                DisableCursor();
+            }
+        }
+
         // -------------------------------------------------------------
         // Modal Toggles (TAB: Supplier, P: Price, F: Finance, R: Reputation, U: Upgrade, B: Furniture)
         // -------------------------------------------------------------
@@ -119,6 +168,7 @@ int main() {
                 reputation.SetMenuOpen(false);
                 shopUpgrade.SetMenuOpen(false);
                 furniture.SetMenuOpen(false);
+                gameTime.SetDaySummaryOpen(false);
                 EnableCursor();
             } else {
                 DisableCursor();
@@ -134,6 +184,7 @@ int main() {
                 reputation.SetMenuOpen(false);
                 shopUpgrade.SetMenuOpen(false);
                 furniture.SetMenuOpen(false);
+                gameTime.SetDaySummaryOpen(false);
                 EnableCursor();
             } else {
                 DisableCursor();
@@ -149,6 +200,7 @@ int main() {
                 reputation.SetMenuOpen(false);
                 shopUpgrade.SetMenuOpen(false);
                 furniture.SetMenuOpen(false);
+                gameTime.SetDaySummaryOpen(false);
                 EnableCursor();
             } else {
                 DisableCursor();
@@ -164,6 +216,7 @@ int main() {
                 finance.SetMenuOpen(false);
                 shopUpgrade.SetMenuOpen(false);
                 furniture.SetMenuOpen(false);
+                gameTime.SetDaySummaryOpen(false);
                 EnableCursor();
             } else {
                 DisableCursor();
@@ -179,6 +232,7 @@ int main() {
                 finance.SetMenuOpen(false);
                 reputation.SetMenuOpen(false);
                 furniture.SetMenuOpen(false);
+                gameTime.SetDaySummaryOpen(false);
                 EnableCursor();
             } else {
                 DisableCursor();
@@ -194,6 +248,7 @@ int main() {
                 finance.SetMenuOpen(false);
                 reputation.SetMenuOpen(false);
                 shopUpgrade.SetMenuOpen(false);
+                gameTime.SetDaySummaryOpen(false);
                 EnableCursor();
             } else {
                 DisableCursor();
@@ -202,7 +257,8 @@ int main() {
 
         anyModalOpen = supplier.IsMenuOpen() || priceMgr.IsMenuOpen() || 
                        finance.IsMenuOpen() || reputation.IsMenuOpen() ||
-                       shopUpgrade.IsMenuOpen() || furniture.IsMenuOpen();
+                       shopUpgrade.IsMenuOpen() || furniture.IsMenuOpen() ||
+                       gameTime.IsDaySummaryOpen();
 
         // -------------------------------------------------------------
         // Supplier Modal Inputs
@@ -226,6 +282,7 @@ int main() {
                 std::string errorMsg = "";
                 int costBefore = GetProductInfo(selType).buyPrice * qty;
                 if (supplier.PlaceOrder(selType, qty, finance, errorMsg)) {
+                    dailyStats.RecordExpense(costBefore); // Record daily stats
                     topNotice = "-Rp" + std::to_string(costBefore) + " Pengadaan (" + std::to_string(qty) + "x " + GetProductInfo(selType).name + ")";
                     topNoticeColor = { 210, 50, 50, 235 };
                     topNoticeTimer = 3.5f;
@@ -275,8 +332,10 @@ int main() {
             }
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 UpgradeType uType = shopUpgrade.GetSelectedUpgradeType();
+                int cost = shopUpgrade.GetNextUpgradeCost(uType);
                 std::string fb;
                 if (shopUpgrade.PurchaseUpgrade(uType, finance, shop, fb)) {
+                    dailyStats.RecordExpense(cost); // Record daily stats
                     topNotice = fb;
                     topNoticeColor = { 46, 204, 113, 235 };
                     topNoticeTimer = 3.5f;
@@ -310,10 +369,18 @@ int main() {
                 std::string fb;
                 bool success = false;
                 if (furniture.GetSelectedTabIndex() == 0) {
-                    success = furniture.PurchaseFurniture(furniture.GetSelectedIndex(), finance, fb);
-                } else {
-                    success = furniture.PurchaseEquipment(furniture.GetSelectedIndex(), finance, fb);
+                    int idx = furniture.GetSelectedIndex();
+                    int price = furniture.GetFurnitureList()[idx].price;
+                    success = furniture.PurchaseFurniture(idx, finance, fb);
                     if (success) {
+                        dailyStats.RecordExpense(price);
+                    }
+                } else {
+                    int idx = furniture.GetSelectedIndex();
+                    int price = furniture.GetEquipmentList()[idx].price;
+                    success = furniture.PurchaseEquipment(idx, finance, fb);
+                    if (success) {
+                        dailyStats.RecordExpense(price);
                         // Apply equipment bonuses
                         int baseShelf = shopUpgrade.GetShelfCapacity() + furniture.GetEquipmentShelfBonus();
                         for (auto& r : shop.GetRacks()) {
@@ -352,7 +419,7 @@ int main() {
         }
         shop.Update(deltaTime);
 
-        // Update Supplier Deliveries -> Delivery to Storage (Only adds stock, does not deduct money)
+        // Update Supplier Deliveries -> Delivery to Storage (Active whether shop is open or closed)
         std::vector<std::string> deliveredNotices;
         supplier.Update(deltaTime, shop.GetStorage(), deliveredNotices);
         for (const auto& notice : deliveredNotices) {
@@ -365,7 +432,7 @@ int main() {
         Rack* targetedRack = shop.GetTargetedRack(player.GetEyePosition(), player.GetLookDirection(), 3.5f);
         ProductType targetedStorageProduct = shop.GetStorage().GetTargetedProduct(player.GetPosition(), player.GetLookDirection(), 3.5f);
 
-        // Interaction Key 'E' Handling
+        // Interaction Key 'E' Handling (Active even when shop is closed, e.g. for restocking)
         if (IsKeyPressed(KEY_E) && !anyModalOpen) {
             // 1. Interaction with Storage Pallets (Taking stock from Storage to Restock)
             if (targetedStorageProduct != ProductType::NONE) {
@@ -419,23 +486,26 @@ int main() {
             }
         }
 
-        // Customer Spawner & State Management (Dynamic customer capacity based on upgrade)
+        // Customer Spawner & State Management
+        // ONLY SPAWN NEW CUSTOMERS IF SHOP IS OPEN (Tahap 10)
         size_t maxCustCapacity = shopUpgrade.GetMaxActiveCustomers();
-        spawnTimer -= deltaTime;
-        if (spawnTimer <= 0.0f && customers.size() < maxCustCapacity) {
-            // Spawn a new customer outside
-            float spawnX = (customerCounter % 2 == 0) ? 3.0f : -3.0f;
-            Vector3 spawnPos = { spawnX, 0.0f, 16.0f + (customerCounter % 3) * 1.5f };
+        if (gameTime.IsShopOpen()) {
+            spawnTimer -= deltaTime;
+            if (spawnTimer <= 0.0f && customers.size() < maxCustCapacity) {
+                // Spawn a new customer outside
+                float spawnX = (customerCounter % 2 == 0) ? 3.0f : -3.0f;
+                Vector3 spawnPos = { spawnX, 0.0f, 16.0f + (customerCounter % 3) * 1.5f };
 
-            std::string cName = customerNames[customerCounter % customerNames.size()];
-            Color cShirt = shirtColors[customerCounter % shirtColors.size()];
-            Color cSkin = skinColors[customerCounter % skinColors.size()];
+                std::string cName = customerNames[customerCounter % customerNames.size()];
+                Color cShirt = shirtColors[customerCounter % shirtColors.size()];
+                Color cSkin = skinColors[customerCounter % skinColors.size()];
 
-            Customer newCust(customerCounter, cName, spawnPos, cSkin, cShirt);
-            customers.push_back(newCust);
-            customerCounter++;
-            
-            spawnTimer = 5.0f + (customerCounter % 3) * 1.2f;
+                Customer newCust(customerCounter, cName, spawnPos, cSkin, cShirt);
+                customers.push_back(newCust);
+                customerCounter++;
+                
+                spawnTimer = 5.0f + (customerCounter % 3) * 1.2f;
+            }
         }
 
         // Count and assign queue indexes for customers heading to or at the cashier
@@ -453,9 +523,12 @@ int main() {
 
             cust.Update(deltaTime, shop, qIndex, didPay, paidAmount, paidProduct);
 
-            // Record customer revenue exactly once through single Finance system
+            // Record customer revenue exactly once through single Finance system & Daily Stats
             if (didPay && paidAmount > 0) {
                 finance.RecordRevenue(paidAmount, "Penjualan " + paidProduct + " ke " + cust.GetName());
+                dailyStats.RecordRevenue(paidAmount);
+                dailyStats.IncrementCustomerServed();
+
                 topNotice = "+Rp" + std::to_string(paidAmount) + " Pendapatan (" + cust.GetName() + " - " + paidProduct + ")";
                 topNoticeColor = { 20, 130, 60, 235 };
                 topNoticeTimer = 3.5f;
@@ -474,6 +547,7 @@ int main() {
                 }
 
                 reputation.RecordRating(cust.GetId(), cust.GetName(), finalSatisfaction, cust.GetHeldProductName(), cust.DidSuccessfullyBuy(), stars, feedback);
+                dailyStats.RecordRating(cust.GetName(), stars, finalSatisfaction, feedback);
 
                 // Rating & feedback notification
                 topNotice = cust.GetName() + " memberi rating " + std::to_string(stars) + "/5 (" + feedback + ")";
@@ -498,7 +572,7 @@ int main() {
 
         // Render Frame
         BeginDrawing();
-            ClearBackground({ 135, 206, 235, 255 }); // Sky blue background
+            ClearBackground(gameTime.GetSkyColor()); // Dynamic Sky color based on morning/day/evening
 
             // 3D Rendering Mode
             BeginMode3D(player.GetCamera());
@@ -512,35 +586,45 @@ int main() {
 
             // 2D HUD / UI Rendering
             // Top-Left Controls & Status Box
-            DrawRectangle(15, 15, 345, 345, { 15, 20, 25, 230 });
-            DrawRectangleLines(15, 15, 345, 345, { 70, 85, 100, 255 });
+            DrawRectangle(15, 15, 345, 385, { 15, 20, 25, 230 });
+            DrawRectangleLines(15, 15, 345, 385, { 70, 85, 100, 255 });
 
-            DrawText("SHOP SIMULATOR 3D (Tahap 9)", 25, 23, 16, { 255, 215, 0, 255 });
-            DrawText("WASD     : Bergerak", 25, 44, 13, RAYWHITE);
-            DrawText("Mouse    : Kontrol Kamera", 25, 62, 13, RAYWHITE);
-            DrawText("E        : Interaksi Rak / Storage", 25, 80, 13, { 100, 230, 100, 255 });
-            DrawText("TAB      : Menu Supplier & Order", 25, 98, 13, { 255, 180, 50, 255 });
-            DrawText("P        : Manajemen Harga Jual", 25, 116, 13, { 100, 200, 255, 255 });
-            DrawText("F        : Ringkasan Keuangan Toko", 25, 134, 13, { 255, 220, 80, 255 });
-            DrawText("R        : Reputasi & Rating Toko", 25, 152, 13, { 241, 196, 15, 255 });
-            DrawText("U        : Upgrade Toko (Shop Upgrade)", 25, 170, 13, { 52, 152, 219, 255 });
-            DrawText("B        : Beli Furniture & Equipment", 25, 188, 13, { 230, 126, 34, 255 });
-            DrawText("ESC      : Keluar Game / Tutup Menu", 25, 206, 13, { 255, 100, 100, 255 });
+            DrawText("SHOP SIMULATOR 3D (Tahap 10)", 25, 23, 16, { 255, 215, 0, 255 });
+            
+            // Time & Shop Open/Closed Banner (Tahap 10)
+            std::string timeHud = gameTime.GetDayString() + "  |  " + gameTime.GetFormattedTime();
+            DrawText(timeHud.c_str(), 25, 45, 16, { 255, 255, 255, 255 });
+
+            bool isShopOpen = gameTime.IsShopOpen();
+            std::string shopStatusText = isShopOpen ? "STATUS TOKO: OPEN (08:00 - 21:00)" : "STATUS TOKO: CLOSED";
+            Color shopStatusCol = isShopOpen ? Color{ 50, 255, 120, 255 } : Color{ 255, 80, 80, 255 };
+            DrawText(shopStatusText.c_str(), 25, 65, 13, shopStatusCol);
+
+            DrawText("WASD     : Bergerak", 25, 85, 13, RAYWHITE);
+            DrawText("Mouse    : Kontrol Kamera", 25, 103, 13, RAYWHITE);
+            DrawText("E        : Interaksi Rak / Storage", 25, 121, 13, { 100, 230, 100, 255 });
+            DrawText("TAB      : Menu Supplier & Order", 25, 139, 13, { 255, 180, 50, 255 });
+            DrawText("P        : Manajemen Harga Jual", 25, 157, 13, { 100, 200, 255, 255 });
+            DrawText("F        : Ringkasan Keuangan Toko", 25, 175, 13, { 255, 220, 80, 255 });
+            DrawText("R        : Reputasi & Rating Toko", 25, 193, 13, { 241, 196, 15, 255 });
+            DrawText("U        : Upgrade Toko (Shop Upgrade)", 25, 211, 13, { 52, 152, 219, 255 });
+            DrawText("B        : Beli Furniture & Equipment", 25, 229, 13, { 230, 126, 34, 255 });
+            DrawText("ESC      : Keluar Game / Tutup Menu", 25, 247, 13, { 255, 100, 100, 255 });
 
             // Carried Product Status
             std::string carriedText = "Membawa: " + player.GetHeldProductName();
             Color carriedColor = player.IsHoldingProduct() ? Color{ 255, 220, 50, 255 } : Color{ 180, 190, 200, 255 };
-            DrawText(carriedText.c_str(), 25, 226, 14, carriedColor);
+            DrawText(carriedText.c_str(), 25, 267, 14, carriedColor);
 
             // Treasury / Money Balance & Levels HUD
             std::string moneyText = "Uang Toko: Rp" + std::to_string(finance.GetCurrentBalance());
-            DrawText(moneyText.c_str(), 25, 246, 16, { 50, 255, 120, 255 });
+            DrawText(moneyText.c_str(), 25, 287, 16, { 50, 255, 120, 255 });
 
             // Shop & Upgrade Levels Summary on HUD
             std::string levelSummary = "Toko: Lvl " + std::to_string(shopUpgrade.GetShopSizeLevel()) +
-                                       " | Rak: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::SHELF_CAPACITY)) +
-                                       " | Gudang: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::STORAGE_CAPACITY));
-            DrawText(levelSummary.c_str(), 25, 268, 12, { 100, 220, 255, 255 });
+                                        " | Rak: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::SHELF_CAPACITY)) +
+                                        " | Gudang: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::STORAGE_CAPACITY));
+            DrawText(levelSummary.c_str(), 25, 309, 12, { 100, 220, 255, 255 });
 
             // Rating & Reputation Indicators on HUD
             std::string repHudText = "";
@@ -550,19 +634,19 @@ int main() {
             } else {
                 repHudText = "Rating: Belum ada | Reputasi: " + std::to_string(reputation.GetReputation()) + "/100";
             }
-            DrawText(repHudText.c_str(), 25, 288, 12, { 255, 215, 0, 255 });
+            DrawText(repHudText.c_str(), 25, 329, 12, { 255, 215, 0, 255 });
 
             // Storage Stock Summary
             std::string storageInfo = "Storage: Minuman " + std::to_string(shop.GetStorage().GetBeverageStock()) +
                                       " | Roti " + std::to_string(shop.GetStorage().GetBreadStock()) +
                                       " | Kaleng " + std::to_string(shop.GetStorage().GetCannedFoodStock()) +
                                       " (Maks: " + std::to_string(shop.GetStorage().GetMaxCapacity()) + ")";
-            DrawText(storageInfo.c_str(), 25, 306, 12, { 255, 200, 120, 255 });
+            DrawText(storageInfo.c_str(), 25, 347, 12, { 255, 200, 120, 255 });
 
             // Customer / Cashier Status Debug
             std::string custCountText = "Customer: " + std::to_string(customers.size()) + "/" + std::to_string(maxCustCapacity) +
                                         " | Antrian Kasir: " + std::to_string(cashierQueueCount);
-            DrawText(custCountText.c_str(), 25, 324, 12, { 200, 230, 250, 255 });
+            DrawText(custCountText.c_str(), 25, 365, 12, { 200, 230, 250, 255 });
 
             // Center Interaction Prompt (When player aims at rack or storage pallet)
             if (targetedStorageProduct != ProductType::NONE) {
@@ -1181,6 +1265,13 @@ int main() {
                          modalX + 45, modalY + 460, 13, { 255, 220, 120, 255 });
             }
 
+            // ==========================================
+            // DAILY SUMMARY MODAL OVERLAY (Tahap 10)
+            // ==========================================
+            if (gameTime.IsDaySummaryOpen()) {
+                dailyStats.RenderSummaryModal(screenWidth, screenHeight, gameTime.GetCurrentDay(), finance.GetCurrentBalance());
+            }
+
         EndDrawing();
     }
 
@@ -1189,5 +1280,3 @@ int main() {
 
     return 0;
 }
-
-
