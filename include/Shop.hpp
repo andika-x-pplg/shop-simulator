@@ -48,7 +48,14 @@ public:
     // Customer navigation: Find a rack that has stock > 0
     int FindAvailableRackIndex(int preferredStartIndex = 0) const;
 
+    // Shop Upgrade: Size expansion
+    int GetShopSizeLevel() const { return shopSizeLevel; }
+    void SetShopSizeLevel(int level);
+    float GetShopWidth() const { return shopWidth; }
+    float GetShopLength() const { return shopLength; }
+
 private:
+    int shopSizeLevel;
     float shopWidth;
     float shopLength;
     float shopHeight;

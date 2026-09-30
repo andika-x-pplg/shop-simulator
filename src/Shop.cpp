@@ -1,16 +1,35 @@
 #include "Shop.hpp"
 
 Shop::Shop()
-    : shopWidth(20.0f), shopLength(24.0f), shopHeight(5.0f),
+    : shopSizeLevel(1),
+      shopWidth(20.0f), shopLength(24.0f), shopHeight(5.0f),
       cashier({ 5.5f, 0.6f, 8.5f }, { 3.5f, 1.2f, 1.6f })
 {
 }
 
 void Shop::Init() {
+    shopSizeLevel = 1;
+    shopWidth = 20.0f;
+    shopLength = 24.0f;
     BuildStructure();
     BuildRacks();
     cashier.Init();
     storage.Init();
+}
+
+void Shop::SetShopSizeLevel(int level) {
+    shopSizeLevel = level;
+    if (level == 1) {
+        shopWidth = 20.0f;
+        shopLength = 24.0f;
+    } else if (level == 2) {
+        shopWidth = 25.0f;
+        shopLength = 28.0f;
+    } else if (level >= 3) {
+        shopWidth = 30.0f;
+        shopLength = 32.0f;
+    }
+    BuildStructure();
 }
 
 void Shop::Update(float deltaTime) {

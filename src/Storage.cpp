@@ -2,10 +2,13 @@
 #include <algorithm>
 #include <cmath>
 
-Storage::Storage() {
+Storage::Storage()
+    : maxStorageCapacity(50)
+{
 }
 
 void Storage::Init() {
+    maxStorageCapacity = 50;
     storageStocks[ProductType::BEVERAGE] = 0;
     storageStocks[ProductType::BREAD] = 0;
     storageStocks[ProductType::CANNED_FOOD] = 0;
@@ -52,7 +55,7 @@ int Storage::GetStock(ProductType type) const {
 
 void Storage::AddStock(ProductType type, int amount) {
     if (type != ProductType::NONE && amount > 0) {
-        storageStocks[type] += amount;
+        storageStocks[type] = std::min(storageStocks[type] + amount, maxStorageCapacity);
     }
 }
 

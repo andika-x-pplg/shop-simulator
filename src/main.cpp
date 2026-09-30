@@ -8,6 +8,8 @@
 #include "PriceManager.hpp"
 #include "Finance.hpp"
 #include "Reputation.hpp"
+#include "ShopUpgrade.hpp"
+#include "Furniture.hpp"
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -18,7 +20,7 @@ int main() {
     const int screenHeight = 720;
     
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
-    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Tahap 8: Kepuasan Customer, Rating & Reputasi Toko");
+    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Tahap 9: Shop Upgrade & Furniture System");
 
     SetTargetFPS(60);
 
@@ -43,6 +45,14 @@ int main() {
     Reputation reputation;
     reputation.Init(50); // Reputasi awal: 50 / 100
 
+    // Shop Upgrade System (Size, Shelf Cap, Storage Cap, Customer Cap)
+    ShopUpgrade shopUpgrade;
+    shopUpgrade.Init();
+
+    // Furniture & Equipment System (3D Models & Bonuses)
+    Furniture furniture;
+    furniture.Init();
+
     Player player;
     // Spawn player in front of shop entrance
     player.Init({ 0.0f, 0.0f, 10.0f });
@@ -54,7 +64,6 @@ int main() {
 
     // 4. Customer NPC System Management
     std::vector<Customer> customers;
-    const size_t maxActiveCustomers = 3;
     float spawnTimer = 2.0f; // First customer arrives in 2 seconds
     int customerCounter = 1;
 
@@ -77,7 +86,9 @@ int main() {
 
     // 5. Main Game Loop
     while (!WindowShouldClose()) {
-        bool anyModalOpen = supplier.IsMenuOpen() || priceMgr.IsMenuOpen() || finance.IsMenuOpen() || reputation.IsMenuOpen();
+        bool anyModalOpen = supplier.IsMenuOpen() || priceMgr.IsMenuOpen() || 
+                             finance.IsMenuOpen() || reputation.IsMenuOpen() ||
+                             shopUpgrade.IsMenuOpen() || furniture.IsMenuOpen();
 
         // Exit or close modals on ESC
         if (IsKeyPressed(KEY_ESCAPE)) {
@@ -86,6 +97,8 @@ int main() {
                 priceMgr.SetMenuOpen(false);
                 finance.SetMenuOpen(false);
                 reputation.SetMenuOpen(false);
+                shopUpgrade.SetMenuOpen(false);
+                furniture.SetMenuOpen(false);
                 DisableCursor();
             } else {
                 break;
@@ -95,7 +108,7 @@ int main() {
         float deltaTime = GetFrameTime();
 
         // -------------------------------------------------------------
-        // Modal Toggles (TAB: Supplier, P: Price Manager, F: Finance, R: Reputation)
+        // Modal Toggles (TAB: Supplier, P: Price, F: Finance, R: Reputation, U: Upgrade, B: Furniture)
         // -------------------------------------------------------------
         if (IsKeyPressed(KEY_TAB)) {
             bool nextState = !supplier.IsMenuOpen();
@@ -104,6 +117,8 @@ int main() {
                 priceMgr.SetMenuOpen(false);
                 finance.SetMenuOpen(false);
                 reputation.SetMenuOpen(false);
+                shopUpgrade.SetMenuOpen(false);
+                furniture.SetMenuOpen(false);
                 EnableCursor();
             } else {
                 DisableCursor();
@@ -117,6 +132,8 @@ int main() {
                 supplier.SetMenuOpen(false);
                 finance.SetMenuOpen(false);
                 reputation.SetMenuOpen(false);
+                shopUpgrade.SetMenuOpen(false);
+                furniture.SetMenuOpen(false);
                 EnableCursor();
             } else {
                 DisableCursor();
@@ -130,6 +147,8 @@ int main() {
                 supplier.SetMenuOpen(false);
                 priceMgr.SetMenuOpen(false);
                 reputation.SetMenuOpen(false);
+                shopUpgrade.SetMenuOpen(false);
+                furniture.SetMenuOpen(false);
                 EnableCursor();
             } else {
                 DisableCursor();
@@ -143,13 +162,47 @@ int main() {
                 supplier.SetMenuOpen(false);
                 priceMgr.SetMenuOpen(false);
                 finance.SetMenuOpen(false);
+                shopUpgrade.SetMenuOpen(false);
+                furniture.SetMenuOpen(false);
                 EnableCursor();
             } else {
                 DisableCursor();
             }
         }
 
-        anyModalOpen = supplier.IsMenuOpen() || priceMgr.IsMenuOpen() || finance.IsMenuOpen() || reputation.IsMenuOpen();
+        if (IsKeyPressed(KEY_U)) {
+            bool nextState = !shopUpgrade.IsMenuOpen();
+            shopUpgrade.SetMenuOpen(nextState);
+            if (nextState) {
+                supplier.SetMenuOpen(false);
+                priceMgr.SetMenuOpen(false);
+                finance.SetMenuOpen(false);
+                reputation.SetMenuOpen(false);
+                furniture.SetMenuOpen(false);
+                EnableCursor();
+            } else {
+                DisableCursor();
+            }
+        }
+
+        if (IsKeyPressed(KEY_B)) {
+            bool nextState = !furniture.IsMenuOpen();
+            furniture.SetMenuOpen(nextState);
+            if (nextState) {
+                supplier.SetMenuOpen(false);
+                priceMgr.SetMenuOpen(false);
+                finance.SetMenuOpen(false);
+                reputation.SetMenuOpen(false);
+                shopUpgrade.SetMenuOpen(false);
+                EnableCursor();
+            } else {
+                DisableCursor();
+            }
+        }
+
+        anyModalOpen = supplier.IsMenuOpen() || priceMgr.IsMenuOpen() || 
+                       finance.IsMenuOpen() || reputation.IsMenuOpen() ||
+                       shopUpgrade.IsMenuOpen() || furniture.IsMenuOpen();
 
         // -------------------------------------------------------------
         // Supplier Modal Inputs
@@ -210,6 +263,76 @@ int main() {
                 topNoticeTimer = 3.0f;
             }
         }
+        // -------------------------------------------------------------
+        // Shop Upgrade Modal Inputs (U)
+        // -------------------------------------------------------------
+        else if (shopUpgrade.IsMenuOpen()) {
+            if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
+                shopUpgrade.PreviousUpgrade();
+            }
+            if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
+                shopUpgrade.NextUpgrade();
+            }
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                UpgradeType uType = shopUpgrade.GetSelectedUpgradeType();
+                std::string fb;
+                if (shopUpgrade.PurchaseUpgrade(uType, finance, shop, fb)) {
+                    topNotice = fb;
+                    topNoticeColor = { 46, 204, 113, 235 };
+                    topNoticeTimer = 3.5f;
+
+                    // Re-apply equipment bonuses if shelf/storage upgraded
+                    int baseShelf = shopUpgrade.GetShelfCapacity() + furniture.GetEquipmentShelfBonus();
+                    for (auto& r : shop.GetRacks()) {
+                        r.SetMaxStock(baseShelf);
+                    }
+                    int baseStorage = shopUpgrade.GetStorageCapacity() + furniture.GetEquipmentStorageBonus();
+                    shop.GetStorage().SetMaxCapacity(baseStorage);
+                } else {
+                    player.SetFeedbackMessage(fb, 2.5f);
+                }
+            }
+        }
+        // -------------------------------------------------------------
+        // Furniture & Equipment Modal Inputs (B)
+        // -------------------------------------------------------------
+        else if (furniture.IsMenuOpen()) {
+            if (IsKeyPressed(KEY_TAB) || IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_E)) {
+                furniture.SwitchTab();
+            }
+            if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
+                furniture.PreviousItem();
+            }
+            if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
+                furniture.NextItem();
+            }
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                std::string fb;
+                bool success = false;
+                if (furniture.GetSelectedTabIndex() == 0) {
+                    success = furniture.PurchaseFurniture(furniture.GetSelectedIndex(), finance, fb);
+                } else {
+                    success = furniture.PurchaseEquipment(furniture.GetSelectedIndex(), finance, fb);
+                    if (success) {
+                        // Apply equipment bonuses
+                        int baseShelf = shopUpgrade.GetShelfCapacity() + furniture.GetEquipmentShelfBonus();
+                        for (auto& r : shop.GetRacks()) {
+                            r.SetMaxStock(baseShelf);
+                        }
+                        int baseStorage = shopUpgrade.GetStorageCapacity() + furniture.GetEquipmentStorageBonus();
+                        shop.GetStorage().SetMaxCapacity(baseStorage);
+                    }
+                }
+
+                if (success) {
+                    topNotice = fb;
+                    topNoticeColor = { 46, 204, 113, 235 };
+                    topNoticeTimer = 3.5f;
+                } else {
+                    player.SetFeedbackMessage(fb, 2.5f);
+                }
+            }
+        }
 
         // Update Top Notification Timer
         if (topNoticeTimer > 0.0f) {
@@ -221,7 +344,11 @@ int main() {
 
         // Update Game Logic (Player movement active when no modal open)
         if (!anyModalOpen) {
-            player.Update(deltaTime, shop.GetColliders());
+            std::vector<AABB> combinedColliders = shop.GetColliders();
+            auto furnColliders = furniture.GetColliders();
+            combinedColliders.insert(combinedColliders.end(), furnColliders.begin(), furnColliders.end());
+
+            player.Update(deltaTime, combinedColliders);
         }
         shop.Update(deltaTime);
 
@@ -292,9 +419,10 @@ int main() {
             }
         }
 
-        // Customer Spawner & State Management
+        // Customer Spawner & State Management (Dynamic customer capacity based on upgrade)
+        size_t maxCustCapacity = shopUpgrade.GetMaxActiveCustomers();
         spawnTimer -= deltaTime;
-        if (spawnTimer <= 0.0f && customers.size() < maxActiveCustomers) {
+        if (spawnTimer <= 0.0f && customers.size() < maxCustCapacity) {
             // Spawn a new customer outside
             float spawnX = (customerCounter % 2 == 0) ? 3.0f : -3.0f;
             Vector3 spawnPos = { spawnX, 0.0f, 16.0f + (customerCounter % 3) * 1.5f };
@@ -307,7 +435,7 @@ int main() {
             customers.push_back(newCust);
             customerCounter++;
             
-            spawnTimer = 6.0f + (customerCounter % 3) * 1.5f;
+            spawnTimer = 5.0f + (customerCounter % 3) * 1.2f;
         }
 
         // Count and assign queue indexes for customers heading to or at the cashier
@@ -338,11 +466,16 @@ int main() {
                 cust.MarkRatingGiven();
                 int stars = 0;
                 std::string feedback = "";
-                reputation.RecordRating(cust.GetId(), cust.GetName(), cust.GetSatisfaction(), cust.GetHeldProductName(), cust.DidSuccessfullyBuy(), stars, feedback);
+                
+                // Extra satisfaction bonus if better cashier equipment owned (+5%)
+                int finalSatisfaction = cust.GetSatisfaction();
+                if (furniture.HasBetterCashierEquipment() && cust.DidSuccessfullyBuy()) {
+                    finalSatisfaction = std::min(100, finalSatisfaction + 5);
+                }
+
+                reputation.RecordRating(cust.GetId(), cust.GetName(), finalSatisfaction, cust.GetHeldProductName(), cust.DidSuccessfullyBuy(), stars, feedback);
 
                 // Rating & feedback notification
-                std::string starStr = "";
-                for (int s = 0; s < stars; ++s) starStr += "*";
                 topNotice = cust.GetName() + " memberi rating " + std::to_string(stars) + "/5 (" + feedback + ")";
                 topNoticeColor = (stars >= 4) ? Color{ 46, 204, 113, 235 } : (stars == 3) ? Color{ 243, 156, 18, 235 } : Color{ 231, 76, 60, 235 };
                 topNoticeTimer = 3.5f;
@@ -370,6 +503,7 @@ int main() {
             // 3D Rendering Mode
             BeginMode3D(player.GetCamera());
                 shop.Render();
+                furniture.Render(); // 3D Furniture & Decorations
                 for (auto& cust : customers) {
                     cust.Render();
                 }
@@ -378,10 +512,10 @@ int main() {
 
             // 2D HUD / UI Rendering
             // Top-Left Controls & Status Box
-            DrawRectangle(15, 15, 345, 310, { 15, 20, 25, 225 });
-            DrawRectangleLines(15, 15, 345, 310, { 70, 85, 100, 255 });
+            DrawRectangle(15, 15, 345, 345, { 15, 20, 25, 230 });
+            DrawRectangleLines(15, 15, 345, 345, { 70, 85, 100, 255 });
 
-            DrawText("SHOP SIMULATOR 3D (Tahap 8)", 25, 23, 16, { 255, 215, 0, 255 });
+            DrawText("SHOP SIMULATOR 3D (Tahap 9)", 25, 23, 16, { 255, 215, 0, 255 });
             DrawText("WASD     : Bergerak", 25, 44, 13, RAYWHITE);
             DrawText("Mouse    : Kontrol Kamera", 25, 62, 13, RAYWHITE);
             DrawText("E        : Interaksi Rak / Storage", 25, 80, 13, { 100, 230, 100, 255 });
@@ -389,16 +523,24 @@ int main() {
             DrawText("P        : Manajemen Harga Jual", 25, 116, 13, { 100, 200, 255, 255 });
             DrawText("F        : Ringkasan Keuangan Toko", 25, 134, 13, { 255, 220, 80, 255 });
             DrawText("R        : Reputasi & Rating Toko", 25, 152, 13, { 241, 196, 15, 255 });
-            DrawText("ESC      : Keluar Game / Tutup Menu", 25, 170, 13, { 255, 100, 100, 255 });
+            DrawText("U        : Upgrade Toko (Shop Upgrade)", 25, 170, 13, { 52, 152, 219, 255 });
+            DrawText("B        : Beli Furniture & Equipment", 25, 188, 13, { 230, 126, 34, 255 });
+            DrawText("ESC      : Keluar Game / Tutup Menu", 25, 206, 13, { 255, 100, 100, 255 });
 
             // Carried Product Status
             std::string carriedText = "Membawa: " + player.GetHeldProductName();
             Color carriedColor = player.IsHoldingProduct() ? Color{ 255, 220, 50, 255 } : Color{ 180, 190, 200, 255 };
-            DrawText(carriedText.c_str(), 25, 192, 14, carriedColor);
+            DrawText(carriedText.c_str(), 25, 226, 14, carriedColor);
 
-            // Treasury / Money Balance & Reputation HUD
+            // Treasury / Money Balance & Levels HUD
             std::string moneyText = "Uang Toko: Rp" + std::to_string(finance.GetCurrentBalance());
-            DrawText(moneyText.c_str(), 25, 212, 16, { 50, 255, 120, 255 });
+            DrawText(moneyText.c_str(), 25, 246, 16, { 50, 255, 120, 255 });
+
+            // Shop & Upgrade Levels Summary on HUD
+            std::string levelSummary = "Toko: Lvl " + std::to_string(shopUpgrade.GetShopSizeLevel()) +
+                                       " | Rak: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::SHELF_CAPACITY)) +
+                                       " | Gudang: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::STORAGE_CAPACITY));
+            DrawText(levelSummary.c_str(), 25, 268, 12, { 100, 220, 255, 255 });
 
             // Rating & Reputation Indicators on HUD
             std::string repHudText = "";
@@ -408,26 +550,19 @@ int main() {
             } else {
                 repHudText = "Rating: Belum ada | Reputasi: " + std::to_string(reputation.GetReputation()) + "/100";
             }
-            DrawText(repHudText.c_str(), 25, 234, 13, { 255, 215, 0, 255 });
+            DrawText(repHudText.c_str(), 25, 288, 12, { 255, 215, 0, 255 });
 
             // Storage Stock Summary
             std::string storageInfo = "Storage: Minuman " + std::to_string(shop.GetStorage().GetBeverageStock()) +
                                       " | Roti " + std::to_string(shop.GetStorage().GetBreadStock()) +
-                                      " | Kaleng " + std::to_string(shop.GetStorage().GetCannedFoodStock());
-            DrawText(storageInfo.c_str(), 25, 256, 12, { 255, 200, 120, 255 });
+                                      " | Kaleng " + std::to_string(shop.GetStorage().GetCannedFoodStock()) +
+                                      " (Maks: " + std::to_string(shop.GetStorage().GetMaxCapacity()) + ")";
+            DrawText(storageInfo.c_str(), 25, 306, 12, { 255, 200, 120, 255 });
 
             // Customer / Cashier Status Debug
-            std::string custCountText = "Customer: " + std::to_string(customers.size()) + "/" + std::to_string(maxActiveCustomers) +
+            std::string custCountText = "Customer: " + std::to_string(customers.size()) + "/" + std::to_string(maxCustCapacity) +
                                         " | Antrian Kasir: " + std::to_string(cashierQueueCount);
-            DrawText(custCountText.c_str(), 25, 274, 12, { 100, 220, 255, 255 });
-
-            if (!customers.empty()) {
-                const auto& activeCust = customers.front();
-                std::string custInfo = activeCust.GetName() + " -> " + activeCust.GetStateString() + " (" + std::to_string(activeCust.GetSatisfaction()) + "%)";
-                DrawText(custInfo.c_str(), 25, 292, 12, { 200, 230, 250, 255 });
-            } else {
-                DrawText("Menunggu customer baru...", 25, 292, 12, { 140, 150, 160, 255 });
-            }
+            DrawText(custCountText.c_str(), 25, 324, 12, { 200, 230, 250, 255 });
 
             // Center Interaction Prompt (When player aims at rack or storage pallet)
             if (targetedStorageProduct != ProductType::NONE) {
@@ -569,7 +704,6 @@ int main() {
             // SUPPLIER ORDER MODAL MENU (TAB)
             // ==========================================
             if (supplier.IsMenuOpen()) {
-                // Dimmed overlay background
                 DrawRectangle(0, 0, screenWidth, screenHeight, { 0, 0, 0, 160 });
 
                 int modalW = 620;
@@ -583,7 +717,6 @@ int main() {
                 DrawText("MENU PENGADAAN BARANG (SUPPLIER)", modalX + 30, modalY + 22, 20, { 255, 215, 0, 255 });
                 DrawText("Pilih produk, tentukan jumlah, lalu tekan ENTER untuk order", modalX + 30, modalY + 48, 13, { 180, 190, 200, 255 });
 
-                // Product items list
                 const auto& prods = priceMgr.GetManagedProducts();
                 int listY = modalY + 78;
 
@@ -597,11 +730,9 @@ int main() {
                     DrawRectangle(modalX + 30, listY, modalW - 60, 62, itemBg);
                     DrawRectangleLines(modalX + 30, listY, modalW - 60, 62, itemBorder);
 
-                    // Product Icon Color Cube
                     DrawRectangle(modalX + 45, listY + 16, 30, 30, info.primaryColor);
                     DrawRectangleLines(modalX + 45, listY + 16, 30, 30, RAYWHITE);
 
-                    // Name and Prices (Supplier buy price remains constant, shop sell price is dynamic)
                     std::string pTitle = info.name + (isSelected ? "  <-- TERPILIH" : "");
                     DrawText(pTitle.c_str(), modalX + 90, listY + 12, 16, isSelected ? Color{ 255, 230, 100, 255 } : RAYWHITE);
 
@@ -613,7 +744,6 @@ int main() {
                     listY += 70;
                 }
 
-                // Quantity selector
                 ProductInfo selectedInfo = GetProductInfo(supplier.GetSelectedProductType());
                 int curQty = supplier.GetOrderQuantity();
                 int curTotal = selectedInfo.buyPrice * curQty;
@@ -631,7 +761,6 @@ int main() {
                 std::string treasuryHint = "Saldo Toko: Rp" + std::to_string(finance.GetCurrentBalance());
                 DrawText(treasuryHint.c_str(), modalX + 370, qtyBoxY + 40, 14, { 50, 255, 120, 255 });
 
-                // Footer Controls Instruction
                 DrawText("[W / S / Panah] Pilih Produk    [A / D] Ubah Jumlah (+-5)    [ENTER] Beli    [TAB / ESC] Tutup",
                          modalX + 35, modalY + 415, 13, { 255, 220, 120, 255 });
             }
@@ -671,20 +800,16 @@ int main() {
                     DrawRectangle(modalX + 30, listY, modalW - 60, 85, itemBg);
                     DrawRectangleLines(modalX + 30, listY, modalW - 60, 85, itemBorder);
 
-                    // Product Color Box
                     DrawRectangle(modalX + 45, listY + 25, 35, 35, info.primaryColor);
                     DrawRectangleLines(modalX + 45, listY + 25, 35, 35, RAYWHITE);
 
-                    // Title
                     std::string pTitle = info.name + (isSelected ? "  [Sedang Dipilih]" : "");
                     DrawText(pTitle.c_str(), modalX + 95, listY + 12, 16, isSelected ? Color{ 255, 230, 100, 255 } : RAYWHITE);
 
-                    // Prices row
                     std::string modalLine = "Modal: Rp" + std::to_string(buyPrice) +
                                             "    |    Jual: Rp" + std::to_string(sellPrice);
                     DrawText(modalLine.c_str(), modalX + 95, listY + 36, 14, { 220, 230, 240, 255 });
 
-                    // Profit / Unit & Warning
                     Color marginColor = (margin >= 0) ? Color{ 50, 255, 120, 255 } : Color{ 255, 80, 80, 255 };
                     std::string marginText = "Profit/unit: " + (margin >= 0 ? ("+Rp" + std::to_string(margin)) : ("-Rp" + std::to_string(-margin)));
                     DrawText(marginText.c_str(), modalX + 95, listY + 58, 14, marginColor);
@@ -693,7 +818,6 @@ int main() {
                         DrawText("(Peringatan: Jual di bawah modal!)", modalX + 280, listY + 58, 12, { 255, 100, 100, 255 });
                     }
 
-                    // Adjustment controls indicator on selected item
                     if (isSelected) {
                         DrawText("[ < A / D >  +-Rp500 ]", modalX + modalW - 235, listY + 36, 13, { 255, 215, 0, 255 });
                     }
@@ -701,7 +825,6 @@ int main() {
                     listY += 95;
                 }
 
-                // Footer
                 DrawText("[W / S / Panah] Pilih Produk    [A / D] Ubah Harga (+-Rp500)    [P / ESC] Tutup",
                          modalX + 45, modalY + 415, 13, { 255, 220, 120, 255 });
             }
@@ -723,11 +846,9 @@ int main() {
                 DrawText("RINGKASAN KEUANGAN TOKO", modalX + 30, modalY + 22, 20, { 255, 215, 0, 255 });
                 DrawText("Data finansial real-time: Pendapatan, Pengeluaran & Profit / Loss", modalX + 30, modalY + 48, 13, { 180, 195, 210, 255 });
 
-                // 4 Main Financial Metrics Cards in 2x2 grid
                 int cardW = 265;
                 int cardH = 65;
 
-                // 1. Saldo Toko
                 int c1X = modalX + 35;
                 int c1Y = modalY + 80;
                 DrawRectangle(c1X, c1Y, cardW, cardH, { 30, 38, 48, 240 });
@@ -736,7 +857,6 @@ int main() {
                 std::string bStr = "Rp" + std::to_string(finance.GetCurrentBalance());
                 DrawText(bStr.c_str(), c1X + 15, c1Y + 34, 18, { 50, 255, 120, 255 });
 
-                // 2. Total Pendapatan (Revenue)
                 int c2X = modalX + 320;
                 int c2Y = modalY + 80;
                 DrawRectangle(c2X, c2Y, cardW, cardH, { 30, 38, 48, 240 });
@@ -745,7 +865,6 @@ int main() {
                 std::string rStr = "Rp" + std::to_string(finance.GetTotalRevenue());
                 DrawText(rStr.c_str(), c2X + 15, c2Y + 34, 18, { 100, 220, 255, 255 });
 
-                // 3. Total Pengeluaran (Expenses)
                 int c3X = modalX + 35;
                 int c3Y = modalY + 155;
                 DrawRectangle(c3X, c3Y, cardW, cardH, { 30, 38, 48, 240 });
@@ -754,7 +873,6 @@ int main() {
                 std::string eStr = "Rp" + std::to_string(finance.GetTotalExpenses());
                 DrawText(eStr.c_str(), c3X + 15, c3Y + 34, 18, { 255, 100, 100, 255 });
 
-                // 4. Keuntungan / Kerugian (Profit = Revenue - Expenses)
                 int c4X = modalX + 320;
                 int c4Y = modalY + 155;
                 int profit = finance.GetTotalProfit();
@@ -769,7 +887,6 @@ int main() {
                 Color profitColor = (profit >= 0) ? Color{ 50, 255, 120, 255 } : Color{ 255, 80, 80, 255 };
                 DrawText(pStr.c_str(), c4X + 15, c4Y + 34, 18, profitColor);
 
-                // Recent Transactions List
                 DrawText("Riwayat Transaksi Terbaru:", modalX + 35, modalY + 235, 14, { 255, 215, 0, 255 });
                 int tBoxY = modalY + 258;
                 DrawRectangle(modalX + 35, tBoxY, modalW - 70, 145, { 18, 22, 28, 240 });
@@ -794,7 +911,6 @@ int main() {
                     }
                 }
 
-                // Footer
                 DrawText("Rumus: Profit = Total Pendapatan - Total Pengeluaran    |    [F / ESC] Tutup",
                          modalX + 45, modalY + 420, 13, { 255, 220, 120, 255 });
             }
@@ -816,11 +932,9 @@ int main() {
                 DrawText("REPUTASI DAN RATING TOKO", modalX + 30, modalY + 22, 20, { 255, 215, 0, 255 });
                 DrawText("Evaluasi kepuasan customer, skor rating bintang, dan reputasi bisnis", modalX + 30, modalY + 48, 13, { 180, 195, 210, 255 });
 
-                // 3 Main Metric Cards in top area
                 int cardW = 175;
                 int cardH = 80;
 
-                // 1. Reputasi Toko (0 - 100)
                 int c1X = modalX + 30;
                 int c1Y = modalY + 75;
                 DrawRectangle(c1X, c1Y, cardW, cardH, { 35, 38, 50, 240 });
@@ -831,7 +945,6 @@ int main() {
                                  (reputation.GetReputation() >= 50) ? Color{ 241, 196, 15, 255 } : Color{ 231, 76, 60, 255 };
                 DrawText(repValStr.c_str(), c1X + 12, c1Y + 38, 20, repColor);
 
-                // 2. Average Rating (1.0 - 5.0)
                 int c2X = modalX + 222;
                 int c2Y = modalY + 75;
                 DrawRectangle(c2X, c2Y, cardW, cardH, { 35, 38, 50, 240 });
@@ -840,7 +953,6 @@ int main() {
                 std::string avgStr = reputation.HasRatings() ? TextFormat("%.1f / 5.0", reputation.GetAverageRating()) : "Belum ada";
                 DrawText(avgStr.c_str(), c2X + 12, c2Y + 38, 20, { 100, 220, 255, 255 });
 
-                // 3. Total Customer Reviewers
                 int c3X = modalX + 415;
                 int c3Y = modalY + 75;
                 DrawRectangle(c3X, c3Y, cardW, cardH, { 35, 38, 50, 240 });
@@ -849,7 +961,6 @@ int main() {
                 std::string countStr = std::to_string(reputation.GetTotalRatings()) + " Ulasan";
                 DrawText(countStr.c_str(), c3X + 12, c3Y + 38, 20, { 50, 255, 120, 255 });
 
-                // Rating & Feedback history list
                 DrawText("Ulasan & Kepuasan Customer Terbaru:", modalX + 30, modalY + 172, 14, { 255, 215, 0, 255 });
                 int rBoxY = modalY + 195;
                 DrawRectangle(modalX + 30, rBoxY, modalW - 60, 210, { 20, 22, 30, 240 });
@@ -865,7 +976,6 @@ int main() {
                         const auto& r = ratings[i];
                         Color starColor = (r.stars >= 4) ? Color{ 255, 215, 0, 255 } : (r.stars == 3) ? Color{ 243, 156, 18, 255 } : Color{ 231, 76, 60, 255 };
 
-                        // Star string
                         std::string starsIcon = "";
                         for (int s = 0; s < r.stars; ++s) starsIcon += "* ";
 
@@ -880,9 +990,195 @@ int main() {
                     }
                 }
 
-                // Footer
                 DrawText("5 Bintang: +3 Reputasi | 4 Bintang: +1 | 3 Bintang: 0 | 2 Bintang: -2 | 1 Bintang: -3    [R / ESC] Tutup",
                          modalX + 35, modalY + 420, 12, { 255, 220, 120, 255 });
+            }
+
+            // ==========================================
+            // SHOP UPGRADE MODAL MENU (U)
+            // ==========================================
+            if (shopUpgrade.IsMenuOpen()) {
+                DrawRectangle(0, 0, screenWidth, screenHeight, { 0, 0, 0, 160 });
+
+                int modalW = 680;
+                int modalH = 490;
+                int modalX = (screenWidth - modalW) / 2;
+                int modalY = (screenHeight - modalH) / 2;
+
+                DrawRectangle(modalX, modalY, modalW, modalH, { 22, 28, 38, 250 });
+                DrawRectangleLines(modalX, modalY, modalW, modalH, { 52, 152, 219, 255 });
+
+                DrawText("UPGRADE FASILITAS TOKO (SHOP UPGRADES)", modalX + 30, modalY + 20, 20, { 100, 220, 255, 255 });
+                DrawText("Tingkatkan kapasitas toko, ukuran ruangan, rak & gudang menggunakan saldo toko", modalX + 30, modalY + 46, 13, { 180, 195, 210, 255 });
+
+                UpgradeType uTypes[4] = {
+                    UpgradeType::SHOP_SIZE,
+                    UpgradeType::SHELF_CAPACITY,
+                    UpgradeType::STORAGE_CAPACITY,
+                    UpgradeType::CUSTOMER_CAPACITY
+                };
+
+                int listY = modalY + 74;
+                for (int i = 0; i < 4; ++i) {
+                    UpgradeType type = uTypes[i];
+                    const auto& upInfo = shopUpgrade.GetUpgradeInfo(type);
+                    bool isSelected = (shopUpgrade.GetSelectedUpgradeIndex() == i);
+                    bool isMax = shopUpgrade.IsMaxLevel(type);
+                    int nextCost = shopUpgrade.GetNextUpgradeCost(type);
+
+                    Color itemBg = isSelected ? Color{ 35, 65, 100, 240 } : Color{ 28, 34, 45, 200 };
+                    Color itemBorder = isSelected ? Color{ 0, 220, 255, 255 } : Color{ 55, 65, 78, 255 };
+
+                    DrawRectangle(modalX + 30, listY, modalW - 60, 72, itemBg);
+                    DrawRectangleLines(modalX + 30, listY, modalW - 60, 72, itemBorder);
+
+                    // Upgrade Name & Level
+                    std::string title = upInfo.name + (isSelected ? "  [Dipilih]" : "");
+                    DrawText(title.c_str(), modalX + 45, listY + 10, 15, isSelected ? Color{ 255, 230, 100, 255 } : RAYWHITE);
+
+                    std::string lvlStr = "Level: " + std::to_string(upInfo.currentLevel) + " / " + std::to_string(upInfo.maxLevel);
+                    DrawText(lvlStr.c_str(), modalX + 320, listY + 10, 14, { 52, 152, 219, 255 });
+
+                    // Current vs Next Benefit
+                    std::string benefitStr = "Saat Ini: " + shopUpgrade.GetCurrentBenefitString(type) + 
+                                             (isMax ? " (Maksimum)" : (" -> Upgrade: " + shopUpgrade.GetNextBenefitString(type)));
+                    DrawText(benefitStr.c_str(), modalX + 45, listY + 32, 13, { 180, 200, 220, 255 });
+
+                    // Cost / Max indicator
+                    if (isMax) {
+                        DrawRectangle(modalX + modalW - 165, listY + 14, 120, 44, { 40, 45, 55, 255 });
+                        DrawRectangleLines(modalX + modalW - 165, listY + 14, 120, 44, { 80, 90, 100, 255 });
+                        DrawText("MAX LEVEL", modalX + modalW - 150, listY + 28, 14, { 241, 196, 15, 255 });
+                    } else {
+                        Color costBg = (finance.GetCurrentBalance() >= nextCost) ? Color{ 30, 100, 50, 240 } : Color{ 110, 35, 35, 240 };
+                        DrawRectangle(modalX + modalW - 165, listY + 14, 120, 44, costBg);
+                        DrawRectangleLines(modalX + modalW - 165, listY + 14, 120, 44, RAYWHITE);
+                        DrawText("Biaya:", modalX + modalW - 155, listY + 18, 11, RAYWHITE);
+                        std::string costStr = "Rp" + std::to_string(nextCost);
+                        DrawText(costStr.c_str(), modalX + modalW - 155, listY + 34, 13, { 255, 255, 120, 255 });
+                    }
+
+                    listY += 80;
+                }
+
+                // Balance & Footer Controls
+                int footerY = modalY + 398;
+                DrawRectangle(modalX + 30, footerY, modalW - 60, 40, { 18, 22, 28, 240 });
+                DrawRectangleLines(modalX + 30, footerY, modalW - 60, 40, { 70, 80, 90, 255 });
+
+                std::string balHint = "Saldo Toko: Rp" + std::to_string(finance.GetCurrentBalance());
+                DrawText(balHint.c_str(), modalX + 45, footerY + 11, 15, { 50, 255, 120, 255 });
+
+                DrawText("[W / S / Panah] Pilih Upgrade    [ENTER] Beli Upgrade    [U / ESC] Tutup",
+                         modalX + 45, modalY + 452, 13, { 255, 220, 120, 255 });
+            }
+
+            // ==========================================
+            // FURNITURE & EQUIPMENT MODAL MENU (B)
+            // ==========================================
+            if (furniture.IsMenuOpen()) {
+                DrawRectangle(0, 0, screenWidth, screenHeight, { 0, 0, 0, 160 });
+
+                int modalW = 700;
+                int modalH = 500;
+                int modalX = (screenWidth - modalW) / 2;
+                int modalY = (screenHeight - modalH) / 2;
+
+                DrawRectangle(modalX, modalY, modalW, modalH, { 24, 28, 38, 250 });
+                DrawRectangleLines(modalX, modalY, modalW, modalH, { 230, 126, 34, 255 });
+
+                DrawText("KATALOG FURNITURE & EQUIPMENT TOKO", modalX + 30, modalY + 18, 20, { 255, 180, 50, 255 });
+
+                // Tabs: [Furniture 3D] vs [Equipment Bonus]
+                int tabY = modalY + 46;
+                bool isFurnTab = (furniture.GetSelectedTabIndex() == 0);
+
+                Color furnTabBg = isFurnTab ? Color{ 230, 126, 34, 255 } : Color{ 40, 45, 55, 255 };
+                Color equipTabBg = !isFurnTab ? Color{ 52, 152, 219, 255 } : Color{ 40, 45, 55, 255 };
+
+                DrawRectangle(modalX + 30, tabY, 180, 32, furnTabBg);
+                DrawRectangleLines(modalX + 30, tabY, 180, 32, RAYWHITE);
+                DrawText("1. Furniture 3D (TAB)", modalX + 45, tabY + 8, 13, RAYWHITE);
+
+                DrawRectangle(modalX + 220, tabY, 195, 32, equipTabBg);
+                DrawRectangleLines(modalX + 220, tabY, 195, 32, RAYWHITE);
+                DrawText("2. Peralatan / Equipment", modalX + 232, tabY + 8, 13, RAYWHITE);
+
+                // Items list
+                int listY = modalY + 90;
+
+                if (isFurnTab) {
+                    const auto& fList = furniture.GetFurnitureList();
+                    for (size_t i = 0; i < fList.size(); ++i) {
+                        const auto& item = fList[i];
+                        bool isSel = (furniture.GetSelectedIndex() == (int)i);
+
+                        Color itemBg = isSel ? Color{ 60, 45, 35, 240 } : Color{ 30, 35, 45, 200 };
+                        Color itemBorder = isSel ? Color{ 255, 180, 50, 255 } : Color{ 55, 65, 75, 255 };
+
+                        DrawRectangle(modalX + 30, listY, modalW - 60, 55, itemBg);
+                        DrawRectangleLines(modalX + 30, listY, modalW - 60, 55, itemBorder);
+
+                        // Icon Color Box
+                        DrawRectangle(modalX + 42, listY + 12, 30, 30, item.primaryColor);
+                        DrawRectangleLines(modalX + 42, listY + 12, 30, 30, RAYWHITE);
+
+                        // Name and description
+                        std::string title = item.name + (isSel ? "  [Dipilih]" : "");
+                        DrawText(title.c_str(), modalX + 85, listY + 8, 14, isSel ? Color{ 255, 230, 100, 255 } : RAYWHITE);
+                        DrawText(item.description.c_str(), modalX + 85, listY + 28, 12, { 180, 195, 210, 255 });
+
+                        // Status / Price
+                        if (item.isOwned) {
+                            DrawRectangle(modalX + modalW - 145, listY + 10, 100, 34, { 30, 90, 45, 255 });
+                            DrawRectangleLines(modalX + modalW - 145, listY + 10, 100, 34, { 100, 255, 120, 255 });
+                            DrawText("OWNED", modalX + modalW - 122, listY + 18, 13, { 100, 255, 120, 255 });
+                        } else {
+                            DrawText(("Rp" + std::to_string(item.price)).c_str(), modalX + modalW - 145, listY + 18, 14, { 255, 215, 0, 255 });
+                        }
+
+                        listY += 60;
+                    }
+                } else {
+                    const auto& eList = furniture.GetEquipmentList();
+                    for (size_t i = 0; i < eList.size(); ++i) {
+                        const auto& item = eList[i];
+                        bool isSel = (furniture.GetSelectedIndex() == (int)i);
+
+                        Color itemBg = isSel ? Color{ 35, 60, 95, 240 } : Color{ 30, 35, 45, 200 };
+                        Color itemBorder = isSel ? Color{ 52, 152, 219, 255 } : Color{ 55, 65, 75, 255 };
+
+                        DrawRectangle(modalX + 30, listY, modalW - 60, 68, itemBg);
+                        DrawRectangleLines(modalX + 30, listY, modalW - 60, 68, itemBorder);
+
+                        // Name and bonus description
+                        std::string title = item.name + (isSel ? "  [Dipilih]" : "");
+                        DrawText(title.c_str(), modalX + 45, listY + 10, 14, isSel ? Color{ 255, 230, 100, 255 } : RAYWHITE);
+                        DrawText(item.bonusDescription.c_str(), modalX + 45, listY + 34, 12, { 100, 220, 255, 255 });
+
+                        // Status / Price
+                        if (item.isOwned) {
+                            DrawRectangle(modalX + modalW - 145, listY + 16, 100, 36, { 30, 90, 45, 255 });
+                            DrawRectangleLines(modalX + modalW - 145, listY + 16, 100, 36, { 100, 255, 120, 255 });
+                            DrawText("OWNED", modalX + modalW - 122, listY + 25, 13, { 100, 255, 120, 255 });
+                        } else {
+                            DrawText(("Rp" + std::to_string(item.price)).c_str(), modalX + modalW - 145, listY + 25, 14, { 255, 215, 0, 255 });
+                        }
+
+                        listY += 75;
+                    }
+                }
+
+                // Balance & Footer Controls
+                int footerY = modalY + 410;
+                DrawRectangle(modalX + 30, footerY, modalW - 60, 38, { 18, 22, 28, 240 });
+                DrawRectangleLines(modalX + 30, footerY, modalW - 60, 38, { 70, 80, 90, 255 });
+
+                std::string balHint = "Saldo Toko: Rp" + std::to_string(finance.GetCurrentBalance());
+                DrawText(balHint.c_str(), modalX + 45, footerY + 10, 15, { 50, 255, 120, 255 });
+
+                DrawText("[Q / E / TAB] Ganti Tab    [W / S / Panah] Pilih    [ENTER] Beli Item    [B / ESC] Tutup",
+                         modalX + 45, modalY + 460, 13, { 255, 220, 120, 255 });
             }
 
         EndDrawing();

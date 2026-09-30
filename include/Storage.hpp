@@ -35,8 +35,13 @@ public:
     int GetBeverageStock() const { return GetStock(ProductType::BEVERAGE); }
     int GetBreadStock() const { return GetStock(ProductType::BREAD); }
     int GetCannedFoodStock() const { return GetStock(ProductType::CANNED_FOOD); }
+    int GetTotalStock() const { return GetBeverageStock() + GetBreadStock() + GetCannedFoodStock(); }
+    int GetMaxCapacity() const { return maxStorageCapacity; }
+    void SetMaxCapacity(int newMax) { if (newMax > 0) maxStorageCapacity = newMax; }
+    bool IsFull(ProductType type) const { return GetStock(type) >= maxStorageCapacity; }
 
 private:
+    int maxStorageCapacity;
     std::map<ProductType, int> storageStocks;
     std::vector<StorageBox> storagePallets;
     std::vector<AABB> colliders;

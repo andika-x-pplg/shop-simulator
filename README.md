@@ -169,6 +169,47 @@ Game simulasi toko 3D modern berbasis C++17 dan raylib 5.0 tanpa game engine ber
     - `Uang Toko: RpXXXXX`
     - `Rating: X.X/5 | Reputasi: XX/100`
 
+## Fitur Tahap 9 (Sistem Upgrade Toko & Furniture/Peralatan)
+- **Sistem Upgrade Toko Berlevel (`ShopUpgrade.hpp`, `ShopUpgrade.cpp`)**:
+  - **Shop Size Upgrade (Level 1-3)**:
+    - Level 1: Ukuran Toko Standar (20m x 24m)
+    - Level 2: Toko Diperluas (25m x 28m) - Biaya Rp 200.000
+    - Level 3: Toko Mega Luas (30m x 32m) - Biaya Rp 450.000
+    - Visual dinding dan lantai 3D toko meregang/membesar secara dinamis dan aman tanpa merusak posisi rak, kasir, storage, maupun waypoint navigasi customer.
+  - **Shelf Capacity Upgrade (Level 1-3)**:
+    - Level 1: 15 unit/rak
+    - Level 2: 25 unit/rak - Biaya Rp 75.000
+    - Level 3: 40 unit/rak - Biaya Rp 150.000
+    - Secara dinamis memperbarui kapasitas maksimum seluruh rak produk (`Rack::SetMaxStock`).
+  - **Storage Capacity Upgrade (Level 1-3)**:
+    - Level 1: 50 unit gudang
+    - Level 2: 100 unit gudang - Biaya Rp 80.000
+    - Level 3: 180 unit gudang - Biaya Rp 160.000
+    - Mengatur batas total daya tampung pallet storage gudang (`Storage::SetMaxCapacity`).
+  - **Customer Capacity Upgrade (Level 1-3)**:
+    - Level 1: Maksimal 3 customer simultan
+    - Level 2: Maksimal 5 customer simultan - Biaya Rp 100.000
+    - Level 3: Maksimal 8 customer simultan - Biaya Rp 220.000
+- **Sistem Furniture 3D (`Furniture.hpp`, `Furniture.cpp`)**:
+  - Objek 3D berestetika tinggi yang dirender di posisi terencana (*predefined layout*) tanpa menghalangi alur customer, kasir, maupun pemain:
+    - **Meja Toko (Store Table)** - Rp 50.000: Meja kayu dengan kaki kokoh.
+    - **Kursi Pelanggan (Customer Chair)** - Rp 30.000: Kursi kayu dengan sandaran.
+    - **Rak Pajangan Ekstra (Display Shelf)** - Rp 100.000: Rak display tambahan dengan bingkai rapi.
+    - **Kabinet Penyimpanan (Storage Cabinet)** - Rp 150.000: Lemari kayu dengan gagang perak.
+    - **Tanaman Hias (Decoration Plant)** - Rp 40.000: Pot tanaman hijau penyegar suasana toko.
+  - Setiap furniture yang telah dibeli otomatis memiliki collider fisik AABB sehingga pemain tidak menembus objek.
+- **Sistem Equipment / Peralatan Toko**:
+  - **Display Berkualitas (Better Display)** - Rp 120.000: Menambah bonus kapasitas rak (+2 kapasitas tambahan).
+  - **Rak Storage Ekstra (Extra Storage Rack)** - Rp 140.000: Menambah kapasitas storage (+15 kapasitas gudang).
+  - **Mesin Kasir Canggih (Better Cashier Equipment)** - Rp 180.000: Meningkatkan kepuasan customer saat checkout (+5% kepuasan).
+- **Menu Toko & Pengelolaan Finansial Terpadu**:
+  - **Menu Upgrade Toko (Tombol `U`)**: Navigasi upgrade 4 kategori dengan status level saat ini, biaya upgrade berikutnya, dan label *MAX LEVEL*.
+  - **Menu Furniture & Equipment (Tombol `B`)**: Navigasi katalog furniture dan equipment dengan status kepemilikan (*Owned / Not Owned*).
+  - **Integrasi Keuangan 100% Terpadu**: Menggunakan `Finance::currentBalance` dan otomatis mencatat ke `Finance::totalExpenses` tanpa mata uang duplikat.
+- **HUD & Notifikasi Tahap 9**:
+  - Banner feedback pembelian dan upgrade (*"Upgrade Berhasil!"*, *"Furniture Berhasil Dibeli!"*, *"Saldo tidak cukup!"*, *"Sudah MAX LEVEL"*).
+  - HUD real-time menampilkan `Level Toko: Lv.X | Rak: Lv.X | Gudang: Lv.X`.
+
 ## Struktur Project
 ```text
 shop-simulator/
@@ -179,26 +220,30 @@ shop-simulator/
 │   ├── Common.hpp      # Struktur matematika & AABB bounding box
 │   ├── Customer.hpp    # Class Customer (FSM, shopping, cashier queue, payment, satisfaction & rating)
 │   ├── Finance.hpp     # Single source of truth keuangan (saldo, revenue, expenses, profit/loss)
+│   ├── Furniture.hpp   # Class Furniture & Equipment (render 3D, status kepemilikan, collider & bonus)
 │   ├── Player.hpp      # Controller first person, held item & feedback
 │   ├── PriceManager.hpp# Manajemen harga jual produk, validasi harga & margin unit
 │   ├── Product.hpp     # Definisi produk, harga jual, harga beli supplier, & visual
 │   ├── Rack.hpp        # Class Rack (stok rak, kapasitas maks, visual items di rak & interaksi)
 │   ├── Reputation.hpp  # Sistem reputasi toko, rata-rata rating, konversi bintang & ulasan customer
-│   ├── Shop.hpp        # Geometri toko, layout rak, kasir, storage pallets & collision list
-│   ├── Storage.hpp     # Class Storage (pallet kayu 3D, visual tumpukan kardus & stok gudang)
+│   ├── Shop.hpp        # Geometri toko, dynamic size level, layout rak, kasir & collision list
+│   ├── ShopUpgrade.hpp # Sistem upgrade toko berlevel (size, shelf, storage, customer capacity)
+│   ├── Storage.hpp     # Class Storage (pallet kayu 3D, kapasitas dinamis & stok gudang)
 │   └── Supplier.hpp    # Class Supplier (katalog produk supplier, order queue & delivery timer)
 ├── src/                # C++ Source files
 │   ├── Cashier.cpp     # Render kasir 3D, NPC kasir berseragam, mesin register & pembayaran
 │   ├── Customer.cpp    # Navigasi lorong, antrean kasir, checkout, scoring kepuasan & rating
 │   ├── Finance.cpp     # Pencatatan transaksi pendapatan, pengeluaran & perhitungan profit
+│   ├── Furniture.cpp   # Render 3D furniture/equipment, collider generator & bonus logic
 │   ├── Player.cpp      # Pergerakan, first-person camera & render held item
 │   ├── PriceManager.cpp# Penyesuaian harga jual, validasi batas & kalkulasi margin
-│   ├── Rack.cpp        # Implementasi render rak bertingkat, batas kapasitas & visual produk
+│   ├── Rack.cpp        # Implementasi render rak bertingkat, batas kapasitas dinamis & visual produk
 │   ├── Reputation.cpp  # Kalkulasi rata-rata rating, penyesuaian reputasi toko & riwayat ulasan
-│   ├── Shop.cpp        # Layout toko, penempatan rak, kasir, storage gudang, waypoint & collider
-│   ├── Storage.cpp     # Render pallet gudang 3D & manajemen stok gudang
+│   ├── Shop.cpp        # Dynamic shop expansion, penempatan rak, kasir, storage, waypoint & collider
+│   ├── ShopUpgrade.cpp # Logika upgrade toko, validasi balance, & modal UI upgrade
+│   ├── Storage.cpp     # Render pallet gudang 3D, kapasitas maksimum & manajemen stok gudang
 │   ├── Supplier.cpp    # Pengadaan barang, countdown delivery & transfer stok otomatis ke gudang
-│   └── main.cpp        # Game loop, modal Supplier (TAB), Harga (P), Keuangan (F), Reputasi (R), & HUD
+│   └── main.cpp        # Game loop, integrasi upgrade, furniture, modal UI (U/B/TAB/P/F/R), & HUD
 └── assets/             # Direktori aset (models, textures, sounds, fonts)
 ```
 
@@ -206,12 +251,14 @@ shop-simulator/
 - **W / A / S / D**: Bergerak maju, kiri, mundur, kanan
 - **Mouse**: Mengarahkan pandangan kamera (Pitch / Yaw)
 - **E**: Interaksi Player (Ambil dari storage / Restock ke rak / Taruh kembali ke storage)
+- **U**: Buka / Tutup Menu Upgrade Toko (Shop Size, Shelf, Storage, Customer)
+- **B**: Buka / Tutup Menu Beli Furniture & Peralatan (Shop Catalog)
 - **TAB**: Buka / Tutup Menu Pengadaan Barang Supplier
 - **P**: Buka / Tutup Menu Manajemen Harga Jual
 - **F**: Buka / Tutup Menu Ringkasan Keuangan Toko
 - **R**: Buka / Tutup Menu Reputasi & Rating Toko
-- **Panah / W, S, A, D**: Navigasi dan atur kuantitas / harga pada menu yang terbuka
-- **ENTER**: Eksekusi Pembelian Pesanan Supplier
+- **Panah / W, S, A, D**: Navigasi menu yang terbuka
+- **ENTER**: Beli Upgrade / Beli Item Furniture / Eksekusi Order Supplier
 - **ESC**: Tutup Menu Aktif / Keluar dari game
 
 ## Cara Build & Menjalankan (Windows)
