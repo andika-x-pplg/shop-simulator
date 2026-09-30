@@ -282,12 +282,44 @@ Game simulasi toko 3D modern berbasis C++17 dan raylib 5.0 tanpa game engine ber
   - Penanganan file tidak ditemukan / slot kosong tanpa menyebabkan crash.
   - Reset aman customer aktif saat Load guna mencegah duplikasi transaksi atau customer berstatus rusak.
 
+## Fitur Tahap 12 (Polish: UI, Suara, Efek, Animasi, Lighting & Balancing)
+- **Sistem Efek Suara Procedural & Audio Manager (`AudioManager.hpp`, `AudioManager.cpp`)**:
+  - Menggunakan modul audio bawaan raylib 5.0 (miniaudio backend) tanpa ketergantungan file external yang berisiko hilang.
+  - Sintesis gelombang suara procedural (*sine wave synthesis with envelope decay*):
+    - **Click (`CLICK`)**: Feedback tombol menu & pergantian navigasi item.
+    - **Pickup (`PICKUP`)**: Nada ascending saat mengambil barang dari rak/storage.
+    - **Putdown (`PUTDOWN`)**: Nada descending saat menaruh/merestock barang ke rak/storage.
+    - **Purchase (`PURCHASE`)**: Chime koin saat membeli order supplier / upgrade / furniture.
+    - **Cash Register (`CASH_REGISTER`)**: Efek register kasir *"ka-ching"* bertingkat saat customer membayar belanjaan.
+    - **Notification (`NOTIFICATION`)**: Nada melodi 2-tone ganda saat notifikasi/save/load.
+    - **Upgrade (`UPGRADE`)**: Melodi arpeggio akor C-Major saat upgrade toko berhasil dibeli.
+    - **Door (`DOOR`)**: Efek lonceng sambutan toko saat pergantian hari baru dibuka.
+  - Pengaturan volume audio: Master Volume (1.0), SFX Volume (0.8), Ambient Volume (0.35).
+- **Pencahayaan & Visual Polish Toko 3D**:
+  - Lampu plafon 3D (*illuminated ceiling light panels*) yang memancarkan cahaya interior hangat merata ke seluruh lorong toko.
+  - Pintu kaca modern semi-transparan dengan aksen karpet sambutan merah (*Welcome Mat*).
+  - Penambahan bayangan halus (*subtle contact shadows*) di bawah meja kasir dan pallet penyimpanan gudang untuk memperjelas kedalaman 3D (*depth perception*).
+- **UI & Crosshair Polish**:
+  - Crosshair reticle dinamis: Berubah ukuran dan warna menjadi hijau cerah serta memunculkan garis bidik saat mengarahkan pandangan ke rak/storage/objek interaktif.
+  - Format interaction prompt yang seragam dan intuitif: `[E] Ambil Produk`, `[E] Taruh di Rak`, `[E] Restock Produk`.
+  - Transisi fade alpha halus pada banner notifikasi bagian atas layar.
+- **Balancing Menyeluruh**:
+  - **Ekonomi & Margin Produk**:
+    - *Minuman*: Beli Rp 3.000, Jual default Rp 5.000 (Margin Rp 2.000).
+    - *Roti*: Beli Rp 5.000, Jual default Rp 8.000 (Margin Rp 3.000).
+    - *Makanan Kaleng*: Beli Rp 8.000, Jual default Rp 12.000 (Margin Rp 4.000).
+  - **Upgrade & Progresi**: Biaya berjenjang yang wajar (Level 1->2 relatif terjangkau, Level 2->3 memerlukan tabungan omzet lebih tinggi).
+  - **Customer Pacing**: Spawner teratur dengan waktu tunggu belanja 2.0s - 3.4s dan pergerakan langkah yang halus.
+- **Performa & Stabilitas**:
+  - Zero memory leak, rendering batching stabil di 60 FPS, dan perlindungan penuh terhadap data Save/Load.
+
 ## Struktur Project
 ```text
 shop-simulator/
 ├── CMakeLists.txt      # Build configuration via CMake & FetchContent raylib
 ├── README.md           # Dokumentasi project
 ├── include/            # C++ Header files
+│   ├── AudioManager.hpp# Audio manager & procedural wave sound synthesizer
 │   ├── Cashier.hpp     # Class Cashier (counter 3D, NPC kasir, POS terminal, antrian, & transaksi)
 │   ├── Common.hpp      # Struktur matematika & AABB bounding box
 │   ├── Customer.hpp    # Class Customer (FSM, shopping, cashier queue, payment, satisfaction & rating)
@@ -301,11 +333,12 @@ shop-simulator/
 │   ├── Rack.hpp        # Class Rack (stok rak, kapasitas maks, visual items di rak & interaksi)
 │   ├── Reputation.hpp  # Sistem reputasi toko, rata-rata rating, konversi bintang & ulasan customer
 │   ├── SaveSystem.hpp  # Sistem Save/Load game, serialisasi JSON, validasi & Game Menu
-│   ├── Shop.hpp        # Geometri toko, dynamic size level, layout rak, kasir & collision list
+│   ├── Shop.hpp        # Geometri toko, dynamic size level, ceiling lights, layout rak & collider
 │   ├── ShopUpgrade.hpp # Sistem upgrade toko berlevel (size, shelf, storage, customer capacity)
 │   ├── Storage.hpp     # Class Storage (pallet kayu 3D, kapasitas dinamis & stok gudang)
 │   └── Supplier.hpp    # Class Supplier (katalog produk supplier, order queue & delivery timer)
 ├── src/                # C++ Source files
+│   ├── AudioManager.cpp# Implementasi sintesis SFX procedural & volume routing
 │   ├── Cashier.cpp     # Render kasir 3D, NPC kasir berseragam, mesin register & pembayaran
 │   ├── Customer.cpp    # Navigasi lorong, antrean kasir, checkout, scoring kepuasan & rating
 │   ├── DailyStats.cpp  # Implementasi agregasi statistik harian & render modal ringkasan harian
@@ -317,11 +350,11 @@ shop-simulator/
 │   ├── Rack.cpp        # Implementasi render rak bertingkat, batas kapasitas dinamis & visual produk
 │   ├── Reputation.cpp  # Kalkulasi rata-rata rating, penyesuaian reputasi toko & riwayat ulasan
 │   ├── SaveSystem.cpp  # Serialisasi/deserialisasi savegame.json, validasi & Game Menu UI
-│   ├── Shop.cpp        # Dynamic shop expansion, penempatan rak, kasir, storage, waypoint & collider
+│   ├── Shop.cpp        # Dynamic shop expansion, ceiling lights, storage, waypoint & collider
 │   ├── ShopUpgrade.cpp # Logika upgrade toko, validasi balance, & modal UI upgrade
 │   ├── Storage.cpp     # Render pallet gudang 3D, kapasitas maksimum & manajemen stok gudang
 │   ├── Supplier.cpp    # Pengadaan barang, countdown delivery & transfer stok otomatis ke gudang
-│   └── main.cpp        # Game loop, integrasi save/load, modal UI (Save/U/B/TAB/P/F/R/Summary), & HUD
+│   └── main.cpp        # Game loop utama, audio cues, modal UI (Save/U/B/TAB/P/F/R/Summary), & HUD
 └── assets/             # Direktori aset (models, textures, sounds, fonts)
 ```
 

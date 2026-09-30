@@ -172,22 +172,46 @@ Rack* Shop::GetTargetedRack(Vector3 playerEyePos, Vector3 playerLookDir, float m
 
 void Shop::Render() {
     // Floor
-    DrawPlane({ 0.0f, 0.0f, 0.0f }, { shopWidth + 8.0f, shopLength + 8.0f }, { 210, 215, 210, 255 }); // Outside ground
-    DrawCube({ 0.0f, -0.05f, 0.0f }, shopWidth, 0.1f, shopLength, { 240, 240, 245, 255 }); // Shop tile floor
+    DrawPlane({ 0.0f, 0.0f, 0.0f }, { shopWidth + 8.0f, shopLength + 8.0f }, { 190, 195, 190, 255 }); // Outside grass/ground
+    DrawCube({ 0.0f, -0.05f, 0.0f }, shopWidth, 0.1f, shopLength, { 245, 245, 250, 255 }); // Shop clean tile floor
     DrawGrid((int)(shopLength / 2), 2.0f); // Tile grid lines
 
-    // Ceiling
-    DrawCube({ 0.0f, shopHeight + 0.05f, 0.0f }, shopWidth, 0.1f, shopLength, { 180, 185, 190, 255 });
+    // Subtle Ground Shadows beneath major fixtures
+    DrawCube({ 5.5f, 0.01f, 8.5f }, 3.7f, 0.02f, 1.8f, { 0, 0, 0, 45 }); // Cashier counter shadow
+    DrawCube({ 3.2f, 0.01f, -9.5f }, 6.8f, 0.02f, 2.2f, { 0, 0, 0, 45 }); // Storage pallet shadow
+
+    // Ceiling & Ceiling Panels
+    DrawCube({ 0.0f, shopHeight + 0.05f, 0.0f }, shopWidth, 0.1f, shopLength, { 210, 215, 220, 255 });
+
+    // Ceiling Light Panels (Illuminated 3D light strips)
+    float lightSpacing = 6.0f;
+    for (float z = -shopLength / 2.0f + 4.0f; z < shopLength / 2.0f - 2.0f; z += lightSpacing) {
+        // Left light panel
+        DrawCube({ -4.5f, shopHeight - 0.08f, z }, 1.2f, 0.12f, 2.8f, { 255, 255, 240, 255 });
+        DrawCubeWires({ -4.5f, shopHeight - 0.08f, z }, 1.2f, 0.12f, 2.8f, { 200, 200, 180, 255 });
+
+        // Right light panel
+        DrawCube({ 4.5f, shopHeight - 0.08f, z }, 1.2f, 0.12f, 2.8f, { 255, 255, 240, 255 });
+        DrawCubeWires({ 4.5f, shopHeight - 0.08f, z }, 1.2f, 0.12f, 2.8f, { 200, 200, 180, 255 });
+    }
 
     // Render Walls
     for (const auto& w : walls) {
         DrawCube(w.position, w.size.x, w.size.y, w.size.z, w.color);
-        DrawCubeWires(w.position, w.size.x, w.size.y, w.size.z, { 70, 75, 80, 255 });
+        DrawCubeWires(w.position, w.size.x, w.size.y, w.size.z, { 80, 85, 95, 255 });
     }
 
-    // Door Frame Posts
-    DrawCube({ -2.0f, 1.8f, shopLength / 2.0f }, 0.2f, 3.6f, 0.6f, { 80, 85, 90, 255 });
-    DrawCube({ 2.0f, 1.8f, shopLength / 2.0f }, 0.2f, 3.6f, 0.6f, { 80, 85, 90, 255 });
+    // Modern Glass Door & Frame
+    DrawCube({ -2.0f, 1.8f, shopLength / 2.0f }, 0.2f, 3.6f, 0.6f, { 60, 65, 70, 255 });
+    DrawCube({ 2.0f, 1.8f, shopLength / 2.0f }, 0.2f, 3.6f, 0.6f, { 60, 65, 70, 255 });
+    DrawCube({ 0.0f, 3.5f, shopLength / 2.0f }, 4.0f, 0.2f, 0.6f, { 60, 65, 70, 255 });
+    // Translucent Glass Panels
+    DrawCube({ -1.0f, 1.7f, shopLength / 2.0f }, 1.8f, 3.2f, 0.05f, { 180, 230, 255, 120 });
+    DrawCube({ 1.0f, 1.7f, shopLength / 2.0f }, 1.8f, 3.2f, 0.05f, { 180, 230, 255, 120 });
+
+    // Store Entrance Welcome Mat
+    DrawCube({ 0.0f, 0.01f, shopLength / 2.0f - 1.2f }, 3.2f, 0.02f, 1.6f, { 192, 57, 43, 255 }); // Red welcome carpet
+    DrawCubeWires({ 0.0f, 0.01f, shopLength / 2.0f - 1.2f }, 3.2f, 0.02f, 1.6f, { 241, 196, 15, 255 });
 
     // Render Cashier Counter & POS System
     cashier.Render();

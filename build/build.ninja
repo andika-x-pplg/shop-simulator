@@ -209,6 +209,16 @@ build CMakeFiles/ShopSimulator.dir/src/SaveSystem.cpp.obj: CXX_COMPILER__ShopSim
   OBJECT_FILE_DIR = CMakeFiles\ShopSimulator.dir\src
   TARGET_SUPPORT_DIR = CMakeFiles\ShopSimulator.dir
 
+build CMakeFiles/ShopSimulator.dir/src/AudioManager.cpp.obj: CXX_COMPILER__ShopSimulator_unscanned_Release E$:/game-projects/shop-simulator/src/AudioManager.cpp || cmake_object_order_depends_target_ShopSimulator
+  CONFIG = Release
+  DEFINES = -DGRAPHICS_API_OPENGL_33 -DPLATFORM_DESKTOP
+  DEP_FILE = CMakeFiles\ShopSimulator.dir\src\AudioManager.cpp.obj.d
+  FLAGS = -O3 -DNDEBUG -std=gnu++17
+  INCLUDES = -IE:/game-projects/shop-simulator/include -IE:/game-projects/shop-simulator/build/_deps/raylib-src/src -IE:/game-projects/shop-simulator/build/_deps/raylib-src/src/external/glfw/include
+  OBJECT_DIR = CMakeFiles\ShopSimulator.dir
+  OBJECT_FILE_DIR = CMakeFiles\ShopSimulator.dir\src
+  TARGET_SUPPORT_DIR = CMakeFiles\ShopSimulator.dir
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target ShopSimulator
@@ -217,7 +227,7 @@ build CMakeFiles/ShopSimulator.dir/src/SaveSystem.cpp.obj: CXX_COMPILER__ShopSim
 #############################################
 # Link the executable ShopSimulator.exe
 
-build ShopSimulator.exe: CXX_EXECUTABLE_LINKER__ShopSimulator_Release CMakeFiles/ShopSimulator.dir/src/main.cpp.obj CMakeFiles/ShopSimulator.dir/src/Player.cpp.obj CMakeFiles/ShopSimulator.dir/src/Shop.cpp.obj CMakeFiles/ShopSimulator.dir/src/Rack.cpp.obj CMakeFiles/ShopSimulator.dir/src/Customer.cpp.obj CMakeFiles/ShopSimulator.dir/src/Cashier.cpp.obj CMakeFiles/ShopSimulator.dir/src/Storage.cpp.obj CMakeFiles/ShopSimulator.dir/src/Supplier.cpp.obj CMakeFiles/ShopSimulator.dir/src/Finance.cpp.obj CMakeFiles/ShopSimulator.dir/src/PriceManager.cpp.obj CMakeFiles/ShopSimulator.dir/src/Reputation.cpp.obj CMakeFiles/ShopSimulator.dir/src/ShopUpgrade.cpp.obj CMakeFiles/ShopSimulator.dir/src/Furniture.cpp.obj CMakeFiles/ShopSimulator.dir/src/GameTime.cpp.obj CMakeFiles/ShopSimulator.dir/src/DailyStats.cpp.obj CMakeFiles/ShopSimulator.dir/src/SaveSystem.cpp.obj | _deps/raylib-build/raylib/libraylib.a _deps/raylib-build/raylib/external/glfw/src/libglfw3.a || _deps/raylib-build/raylib/external/glfw/src/libglfw3.a _deps/raylib-build/raylib/libraylib.a
+build ShopSimulator.exe: CXX_EXECUTABLE_LINKER__ShopSimulator_Release CMakeFiles/ShopSimulator.dir/src/main.cpp.obj CMakeFiles/ShopSimulator.dir/src/Player.cpp.obj CMakeFiles/ShopSimulator.dir/src/Shop.cpp.obj CMakeFiles/ShopSimulator.dir/src/Rack.cpp.obj CMakeFiles/ShopSimulator.dir/src/Customer.cpp.obj CMakeFiles/ShopSimulator.dir/src/Cashier.cpp.obj CMakeFiles/ShopSimulator.dir/src/Storage.cpp.obj CMakeFiles/ShopSimulator.dir/src/Supplier.cpp.obj CMakeFiles/ShopSimulator.dir/src/Finance.cpp.obj CMakeFiles/ShopSimulator.dir/src/PriceManager.cpp.obj CMakeFiles/ShopSimulator.dir/src/Reputation.cpp.obj CMakeFiles/ShopSimulator.dir/src/ShopUpgrade.cpp.obj CMakeFiles/ShopSimulator.dir/src/Furniture.cpp.obj CMakeFiles/ShopSimulator.dir/src/GameTime.cpp.obj CMakeFiles/ShopSimulator.dir/src/DailyStats.cpp.obj CMakeFiles/ShopSimulator.dir/src/SaveSystem.cpp.obj CMakeFiles/ShopSimulator.dir/src/AudioManager.cpp.obj | _deps/raylib-build/raylib/libraylib.a _deps/raylib-build/raylib/external/glfw/src/libglfw3.a || _deps/raylib-build/raylib/external/glfw/src/libglfw3.a _deps/raylib-build/raylib/libraylib.a
   CONFIG = Release
   FLAGS = -O3 -DNDEBUG
   LINK_LIBRARIES = _deps/raylib-build/raylib/libraylib.a  -lopengl32  -lglu32  -lwinmm  _deps/raylib-build/raylib/external/glfw/src/libglfw3.a  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32

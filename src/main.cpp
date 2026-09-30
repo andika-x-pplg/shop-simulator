@@ -13,9 +13,11 @@
 #include "GameTime.hpp"
 #include "DailyStats.hpp"
 #include "SaveSystem.hpp"
+#include "AudioManager.hpp"
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <algorithm>
 
 int main() {
     // 1. Window Initialization
@@ -23,9 +25,13 @@ int main() {
     const int screenHeight = 720;
     
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
-    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Tahap 11: Save / Load Game System");
+    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Tahap 12: Polish (UI, Audio, Visuals & Balancing)");
 
     SetTargetFPS(60);
+
+    // Initialize Audio Manager (Tahap 12)
+    AudioManager& audioMgr = AudioManager::Instance();
+    audioMgr.Init();
 
     // Disable cursor for smooth first-person mouse controls
     DisableCursor();
@@ -37,7 +43,7 @@ int main() {
     Supplier supplier;
     supplier.Init();
 
-    // Single source of truth for Store Economy (Saldo Awal: Rp100.000)
+    // Single source of truth for Store Economy (Starting Balance: Rp100.000)
     Finance finance(100000);
 
     // Dynamic Price Management System
@@ -74,7 +80,7 @@ int main() {
     player.Init({ 0.0f, 0.0f, 10.0f });
 
     // Transaction & Delivery Notification Banner
-    std::string topNotice = "Toko dibuka! (Hari 1 - 08:00)";
+    std::string topNotice = "Toko dibuka! Selamat melayani pelanggan.";
     float topNoticeTimer = 4.0f;
     Color topNoticeColor = { 46, 204, 113, 235 };
 
@@ -84,14 +90,16 @@ int main() {
     int customerCounter = 1;
 
     // Pre-defined customer profiles (name, skin tone, shirt color)
-    const std::vector<std::string> customerNames = { "Budi", "Siti", "Andi", "Dewi", "Rian", "Maya" };
+    const std::vector<std::string> customerNames = { "Budi", "Siti", "Andi", "Dewi", "Rian", "Maya", "Doni", "Putri" };
     const std::vector<Color> shirtColors = {
         { 52, 152, 219, 255 },  // Blue
         { 231, 76, 60, 255 },   // Red
         { 46, 204, 113, 255 },  // Green
         { 155, 89, 182, 255 },  // Purple
         { 241, 196, 15, 255 },  // Yellow
-        { 230, 126, 34, 255 }   // Orange
+        { 230, 126, 34, 255 },  // Orange
+        { 26, 188, 156, 255 },  // Turquoise
+        { 236, 240, 241, 255 }   // Light Gray
     };
     const std::vector<Color> skinColors = {
         { 255, 220, 185, 255 },
@@ -118,6 +126,7 @@ int main() {
         topNotice = "Permainan Baru Dimulai! (Day 1 - 08:00)";
         topNoticeColor = { 46, 204, 113, 235 };
         topNoticeTimer = 4.0f;
+        audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
     };
 
     // 5. Main Game Loop
@@ -129,6 +138,7 @@ int main() {
 
         // Exit or close modals on ESC (or open Game Menu if in normal play)
         if (IsKeyPressed(KEY_ESCAPE)) {
+            audioMgr.PlayEvent(SoundEvent::CLICK);
             if (saveSystem.IsMenuOpen()) {
                 saveSystem.SetMenuOpen(false);
                 DisableCursor();
@@ -160,6 +170,8 @@ int main() {
             topNotice = timeNotice;
             topNoticeColor = timeNoticeCol;
             topNoticeTimer = 4.0f;
+            audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
+
             if (gameTime.IsDaySummaryOpen()) {
                 // Trigger Auto-save on day end if closing
                 std::string autoSaveMsg;
@@ -173,6 +185,7 @@ int main() {
         // -------------------------------------------------------------
         if (gameTime.IsDaySummaryOpen()) {
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                audioMgr.PlayEvent(SoundEvent::DOOR);
                 // Advance to Next Day
                 std::string nextDayNotice;
                 Color nextDayCol;
@@ -197,6 +210,7 @@ int main() {
         // Game Menu & Save/Load Modal (F5: Quick Save, F9: Quick Load, M: Game Menu)
         // -------------------------------------------------------------
         if (IsKeyPressed(KEY_M)) {
+            audioMgr.PlayEvent(SoundEvent::CLICK);
             bool nextState = !saveSystem.IsMenuOpen();
             saveSystem.SetMenuOpen(nextState);
             if (nextState) {
@@ -219,6 +233,7 @@ int main() {
             if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, msg)) {
                 topNotice = "Quick Save: " + msg;
                 topNoticeColor = { 46, 204, 113, 235 };
+                audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
             } else {
                 topNotice = "Quick Save Gagal!";
                 topNoticeColor = { 231, 76, 60, 235 };
@@ -234,6 +249,7 @@ int main() {
                 spawnTimer = 2.0f;
                 topNotice = "Quick Load: " + msg;
                 topNoticeColor = { 52, 152, 219, 235 };
+                audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
             } else {
                 topNotice = msg;
                 topNoticeColor = { 231, 76, 60, 235 };
@@ -245,6 +261,7 @@ int main() {
         // Modal Toggles (TAB: Supplier, P: Price, F: Finance, R: Reputation, U: Upgrade, B: Furniture)
         // -------------------------------------------------------------
         if (IsKeyPressed(KEY_TAB)) {
+            audioMgr.PlayEvent(SoundEvent::CLICK);
             bool nextState = !supplier.IsMenuOpen();
             supplier.SetMenuOpen(nextState);
             if (nextState) {
@@ -262,6 +279,7 @@ int main() {
         }
 
         if (IsKeyPressed(KEY_P)) {
+            audioMgr.PlayEvent(SoundEvent::CLICK);
             bool nextState = !priceMgr.IsMenuOpen();
             priceMgr.SetMenuOpen(nextState);
             if (nextState) {
@@ -279,6 +297,7 @@ int main() {
         }
 
         if (IsKeyPressed(KEY_F)) {
+            audioMgr.PlayEvent(SoundEvent::CLICK);
             bool nextState = !finance.IsMenuOpen();
             finance.SetMenuOpen(nextState);
             if (nextState) {
@@ -296,6 +315,7 @@ int main() {
         }
 
         if (IsKeyPressed(KEY_R)) {
+            audioMgr.PlayEvent(SoundEvent::CLICK);
             bool nextState = !reputation.IsMenuOpen();
             reputation.SetMenuOpen(nextState);
             if (nextState) {
@@ -313,6 +333,7 @@ int main() {
         }
 
         if (IsKeyPressed(KEY_U)) {
+            audioMgr.PlayEvent(SoundEvent::CLICK);
             bool nextState = !shopUpgrade.IsMenuOpen();
             shopUpgrade.SetMenuOpen(nextState);
             if (nextState) {
@@ -330,6 +351,7 @@ int main() {
         }
 
         if (IsKeyPressed(KEY_B)) {
+            audioMgr.PlayEvent(SoundEvent::CLICK);
             bool nextState = !furniture.IsMenuOpen();
             furniture.SetMenuOpen(nextState);
             if (nextState) {
@@ -357,14 +379,17 @@ int main() {
         if (saveSystem.IsMenuOpen()) {
             if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
                 saveSystem.PreviousAction();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
                 saveSystem.NextAction();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 int action = saveSystem.GetSelectedActionIndex();
                 if (action == 0) {
                     // Continue
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
                     saveSystem.SetMenuOpen(false);
                     DisableCursor();
                 } else if (action == 1) {
@@ -373,6 +398,7 @@ int main() {
                     if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, msg)) {
                         topNotice = msg;
                         topNoticeColor = { 46, 204, 113, 235 };
+                        audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
                     } else {
                         topNotice = msg;
                         topNoticeColor = { 231, 76, 60, 235 };
@@ -388,6 +414,7 @@ int main() {
                         spawnTimer = 2.0f;
                         topNotice = msg;
                         topNoticeColor = { 52, 152, 219, 235 };
+                        audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
                     } else {
                         topNotice = msg;
                         topNoticeColor = { 231, 76, 60, 235 };
@@ -412,15 +439,19 @@ int main() {
         else if (supplier.IsMenuOpen()) {
             if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
                 supplier.PreviousProduct();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
                 supplier.NextProduct();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) {
                 supplier.IncreaseQuantity(5);
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) {
                 supplier.DecreaseQuantity(5);
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 ProductType selType = supplier.GetSelectedProductType();
@@ -432,6 +463,7 @@ int main() {
                     topNotice = "-Rp" + std::to_string(costBefore) + " Pengadaan (" + std::to_string(qty) + "x " + GetProductInfo(selType).name + ")";
                     topNoticeColor = { 210, 50, 50, 235 };
                     topNoticeTimer = 3.5f;
+                    audioMgr.PlayEvent(SoundEvent::PURCHASE);
                 } else {
                     player.SetFeedbackMessage(errorMsg, 2.5f);
                 }
@@ -443,9 +475,11 @@ int main() {
         else if (priceMgr.IsMenuOpen()) {
             if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
                 priceMgr.PreviousProduct();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
                 priceMgr.NextProduct();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) {
                 ProductType curType = priceMgr.GetSelectedProductType();
@@ -455,6 +489,7 @@ int main() {
                 topNotice = fb;
                 topNoticeColor = { 40, 120, 200, 235 };
                 topNoticeTimer = 3.0f;
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) {
                 ProductType curType = priceMgr.GetSelectedProductType();
@@ -464,6 +499,7 @@ int main() {
                 topNotice = fb;
                 topNoticeColor = { 40, 120, 200, 235 };
                 topNoticeTimer = 3.0f;
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
         }
         // -------------------------------------------------------------
@@ -472,9 +508,11 @@ int main() {
         else if (shopUpgrade.IsMenuOpen()) {
             if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
                 shopUpgrade.PreviousUpgrade();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
                 shopUpgrade.NextUpgrade();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 UpgradeType uType = shopUpgrade.GetSelectedUpgradeType();
@@ -485,6 +523,7 @@ int main() {
                     topNotice = fb;
                     topNoticeColor = { 46, 204, 113, 235 };
                     topNoticeTimer = 3.5f;
+                    audioMgr.PlayEvent(SoundEvent::UPGRADE);
 
                     // Re-apply equipment bonuses if shelf/storage upgraded
                     int baseShelf = shopUpgrade.GetShelfCapacity() + furniture.GetEquipmentShelfBonus();
@@ -504,12 +543,15 @@ int main() {
         else if (furniture.IsMenuOpen()) {
             if (IsKeyPressed(KEY_TAB) || IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_E)) {
                 furniture.SwitchTab();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
                 furniture.PreviousItem();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
                 furniture.NextItem();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
                 std::string fb;
@@ -541,6 +583,7 @@ int main() {
                     topNotice = fb;
                     topNoticeColor = { 46, 204, 113, 235 };
                     topNoticeTimer = 3.5f;
+                    audioMgr.PlayEvent(SoundEvent::PURCHASE);
                 } else {
                     player.SetFeedbackMessage(fb, 2.5f);
                 }
@@ -572,6 +615,7 @@ int main() {
             topNotice = notice;
             topNoticeColor = { 20, 140, 60, 230 };
             topNoticeTimer = 4.0f;
+            audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
         }
 
         // Check Interaction Targets (Look ray to Rack or Storage Pallets within 3.5m)
@@ -586,6 +630,7 @@ int main() {
                     if (shop.GetStorage().TakeStock(targetedStorageProduct)) {
                         player.PickUpProduct(targetedStorageProduct);
                         player.SetFeedbackMessage("Mengambil " + GetProductInfo(targetedStorageProduct).name + " dari Storage", 1.5f);
+                        audioMgr.PlayEvent(SoundEvent::PICKUP);
                     } else {
                         player.SetFeedbackMessage("Stok " + GetProductInfo(targetedStorageProduct).name + " di Storage kosong! Beli di Supplier (TAB)", 2.5f);
                     }
@@ -596,6 +641,7 @@ int main() {
                         shop.GetStorage().AddStock(held, 1);
                         player.DropOrPlaceProduct();
                         player.SetFeedbackMessage("Mengembalikan " + GetProductInfo(held).name + " ke Storage", 1.5f);
+                        audioMgr.PlayEvent(SoundEvent::PUTDOWN);
                     } else {
                         player.SetFeedbackMessage("Pallet ini untuk " + GetProductInfo(targetedStorageProduct).name + "!", 2.0f);
                     }
@@ -609,6 +655,7 @@ int main() {
                         ProductType pType = targetedRack->GetProductType();
                         if (targetedRack->TakeProduct()) {
                             player.PickUpProduct(pType);
+                            audioMgr.PlayEvent(SoundEvent::PICKUP);
                         }
                     } else {
                         player.SetFeedbackMessage("Stok di rak ini habis! Ambil dari Storage atau beli di Supplier (TAB)", 2.5f);
@@ -621,6 +668,7 @@ int main() {
                             if (targetedRack->PlaceProduct(held)) {
                                 player.DropOrPlaceProduct();
                                 player.SetFeedbackMessage("Restock " + GetProductInfo(held).name + " Berhasil! (+1)", 1.5f);
+                                audioMgr.PlayEvent(SoundEvent::PUTDOWN);
                             }
                         } else {
                             player.SetFeedbackMessage("Rak sudah penuh! (Maks: " + std::to_string(targetedRack->GetMaxStock()) + ")", 2.0f);
@@ -678,6 +726,9 @@ int main() {
                 topNotice = "+Rp" + std::to_string(paidAmount) + " Pendapatan (" + cust.GetName() + " - " + paidProduct + ")";
                 topNoticeColor = { 20, 130, 60, 235 };
                 topNoticeTimer = 3.5f;
+
+                // Cash Register Audio Effect (Tahap 12)
+                audioMgr.PlayEvent(SoundEvent::CASH_REGISTER);
             }
 
             // Customer leaves / exits shop -> Record rating exactly once
@@ -735,7 +786,7 @@ int main() {
             DrawRectangle(15, 15, 345, 410, { 15, 20, 25, 230 });
             DrawRectangleLines(15, 15, 345, 410, { 70, 85, 100, 255 });
 
-            DrawText("SHOP SIMULATOR 3D (Tahap 11)", 25, 23, 16, { 255, 215, 0, 255 });
+            DrawText("SHOP SIMULATOR 3D (Tahap 12 Polish)", 25, 23, 16, { 255, 215, 0, 255 });
             
             // Time & Shop Open/Closed Banner (Tahap 10)
             std::string timeHud = gameTime.GetDayString() + "  |  " + gameTime.GetFormattedTime();
@@ -804,7 +855,7 @@ int main() {
 
                 if (!player.IsHoldingProduct()) {
                     if (stStock > 0) {
-                        stPrompt = "Tekan E untuk mengambil " + pName + " dari Storage (Tersedia: " + std::to_string(stStock) + ")";
+                        stPrompt = "[E] Ambil " + pName + " dari Storage (Tersedia: " + std::to_string(stStock) + ")";
                         stColor = { 100, 255, 120, 255 };
                     } else {
                         stPrompt = "[Storage " + pName + " Kosong - Beli di Supplier (TAB)]";
@@ -812,7 +863,7 @@ int main() {
                     }
                 } else {
                     if (player.GetHeldProduct() == targetedStorageProduct) {
-                        stPrompt = "Tekan E untuk menaruh kembali " + pName + " ke Storage";
+                        stPrompt = "[E] Taruh kembali " + pName + " ke Storage";
                     } else {
                         stPrompt = "[Pallet Storage " + pName + " - Bukan untuk " + player.GetHeldProductName() + "]";
                     }
@@ -834,7 +885,7 @@ int main() {
 
                 if (!player.IsHoldingProduct()) {
                     if (targetedRack->HasStock()) {
-                        promptText = "Tekan E untuk mengambil " + targetedRack->GetProductName() + 
+                        promptText = "[E] Ambil " + targetedRack->GetProductName() + 
                                      " (Stok: " + std::to_string(targetedRack->GetStock()) + "/" + std::to_string(targetedRack->GetMaxStock()) + 
                                      " | Harga Jual: Rp" + std::to_string(curSellPrice) + ")";
                         promptTextColor = { 100, 255, 100, 255 };
@@ -845,7 +896,7 @@ int main() {
                 } else {
                     if (targetedRack->GetProductType() == player.GetHeldProduct()) {
                         if (!targetedRack->IsFull()) {
-                            promptText = "Tekan E untuk Restock " + player.GetHeldProductName() + 
+                            promptText = "[E] Restock " + player.GetHeldProductName() + 
                                          " (Stok: " + std::to_string(targetedRack->GetStock()) + "/" + std::to_string(targetedRack->GetMaxStock()) + ")";
                             promptTextColor = { 100, 220, 255, 255 };
                         } else {
@@ -868,7 +919,7 @@ int main() {
                     DrawText(promptText.c_str(), boxX + 20, boxY + 10, 16, promptTextColor);
                 }
             } else if (playerNearCashier) {
-                std::string cashierInfo = "Meja Kasir Toko (NPC Kasir Aktif)";
+                std::string cashierInfo = "[Kasir] Meja Kasir Toko (NPC Kasir Siaga)";
                 int textWidth = MeasureText(cashierInfo.c_str(), 16);
                 int boxX = (screenWidth - textWidth) / 2 - 15;
                 int boxY = screenHeight / 2 + 50;
@@ -877,15 +928,21 @@ int main() {
                 DrawText(cashierInfo.c_str(), boxX + 15, boxY + 8, 16, { 150, 210, 255, 255 });
             }
 
-            // Top Notification Banner
+            // Top Notification Banner (Polished with subtle alpha fade)
             if (topNoticeTimer > 0.0f) {
+                float alphaFactor = std::min(1.0f, topNoticeTimer * 2.0f);
+                Color fadedBg = topNoticeColor;
+                fadedBg.a = (unsigned char)(topNoticeColor.a * alphaFactor);
+                Color fadedBorder = RAYWHITE;
+                fadedBorder.a = (unsigned char)(255 * alphaFactor);
+
                 int noticeWidth = MeasureText(topNotice.c_str(), 18);
                 int nBoxX = (screenWidth - noticeWidth) / 2 - 25;
                 int nBoxY = 25;
 
-                DrawRectangle(nBoxX, nBoxY, noticeWidth + 50, 42, topNoticeColor);
-                DrawRectangleLines(nBoxX, nBoxY, noticeWidth + 50, 42, RAYWHITE);
-                DrawText(topNotice.c_str(), nBoxX + 25, nBoxY + 12, 18, RAYWHITE);
+                DrawRectangle(nBoxX, nBoxY, noticeWidth + 50, 42, fadedBg);
+                DrawRectangleLines(nBoxX, nBoxY, noticeWidth + 50, 42, fadedBorder);
+                DrawText(topNotice.c_str(), nBoxX + 25, nBoxY + 12, 18, fadedBorder);
             }
 
             // Temporary Warning / Feedback Banner (Center)
@@ -918,14 +975,22 @@ int main() {
                 }
             }
 
-            // Crosshair in screen center (when no modal open)
+            // Polished Crosshair in screen center (Dynamic color feedback)
             if (!anyModalOpen) {
                 int centerX = screenWidth / 2;
                 int centerY = screenHeight / 2;
                 bool isTargeting = (targetedRack != nullptr || targetedStorageProduct != ProductType::NONE);
-                Color crosshairColor = isTargeting ? Color{ 50, 255, 100, 230 } : Color{ 255, 255, 255, 180 };
-                DrawCircle(centerX, centerY, 3.0f, crosshairColor);
-                DrawCircleLines(centerX, centerY, 7.0f, crosshairColor);
+                Color crosshairColor = isTargeting ? Color{ 46, 204, 113, 240 } : Color{ 255, 255, 255, 190 };
+                
+                // Crosshair reticle
+                DrawCircle(centerX, centerY, isTargeting ? 3.5f : 2.5f, crosshairColor);
+                DrawCircleLines(centerX, centerY, isTargeting ? 8.0f : 6.0f, crosshairColor);
+                if (isTargeting) {
+                    DrawLine(centerX - 12, centerY, centerX - 5, centerY, crosshairColor);
+                    DrawLine(centerX + 5, centerY, centerX + 12, centerY, crosshairColor);
+                    DrawLine(centerX, centerY - 12, centerX, centerY - 5, crosshairColor);
+                    DrawLine(centerX, centerY + 5, centerX, centerY + 12, crosshairColor);
+                }
             }
 
             // FPS Counter in top right
@@ -1430,6 +1495,7 @@ int main() {
     }
 
     // 6. Cleanup
+    audioMgr.Close();
     CloseWindow();
 
     return 0;
