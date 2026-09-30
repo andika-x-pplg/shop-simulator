@@ -7,6 +7,7 @@
 #include "Supplier.hpp"
 #include "PriceManager.hpp"
 #include "Finance.hpp"
+#include "Reputation.hpp"
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -17,7 +18,7 @@ int main() {
     const int screenHeight = 720;
     
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
-    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Tahap 7: Sistem Ekonomi & Manajemen Harga");
+    InitWindow(screenWidth, screenHeight, "3D Shop Simulator - Tahap 8: Kepuasan Customer, Rating & Reputasi Toko");
 
     SetTargetFPS(60);
 
@@ -37,6 +38,10 @@ int main() {
     // Dynamic Price Management System
     PriceManager& priceMgr = PriceManager::Instance();
     priceMgr.Init();
+
+    // Store Reputation & Customer Satisfaction Rating System
+    Reputation reputation;
+    reputation.Init(50); // Reputasi awal: 50 / 100
 
     Player player;
     // Spawn player in front of shop entrance
@@ -72,7 +77,7 @@ int main() {
 
     // 5. Main Game Loop
     while (!WindowShouldClose()) {
-        bool anyModalOpen = supplier.IsMenuOpen() || priceMgr.IsMenuOpen() || finance.IsMenuOpen();
+        bool anyModalOpen = supplier.IsMenuOpen() || priceMgr.IsMenuOpen() || finance.IsMenuOpen() || reputation.IsMenuOpen();
 
         // Exit or close modals on ESC
         if (IsKeyPressed(KEY_ESCAPE)) {
@@ -80,6 +85,7 @@ int main() {
                 supplier.SetMenuOpen(false);
                 priceMgr.SetMenuOpen(false);
                 finance.SetMenuOpen(false);
+                reputation.SetMenuOpen(false);
                 DisableCursor();
             } else {
                 break;
@@ -89,7 +95,7 @@ int main() {
         float deltaTime = GetFrameTime();
 
         // -------------------------------------------------------------
-        // Modal Toggles (TAB: Supplier, P: Price Manager, F: Finance)
+        // Modal Toggles (TAB: Supplier, P: Price Manager, F: Finance, R: Reputation)
         // -------------------------------------------------------------
         if (IsKeyPressed(KEY_TAB)) {
             bool nextState = !supplier.IsMenuOpen();
@@ -97,6 +103,7 @@ int main() {
             if (nextState) {
                 priceMgr.SetMenuOpen(false);
                 finance.SetMenuOpen(false);
+                reputation.SetMenuOpen(false);
                 EnableCursor();
             } else {
                 DisableCursor();
@@ -109,6 +116,7 @@ int main() {
             if (nextState) {
                 supplier.SetMenuOpen(false);
                 finance.SetMenuOpen(false);
+                reputation.SetMenuOpen(false);
                 EnableCursor();
             } else {
                 DisableCursor();
@@ -121,13 +129,27 @@ int main() {
             if (nextState) {
                 supplier.SetMenuOpen(false);
                 priceMgr.SetMenuOpen(false);
+                reputation.SetMenuOpen(false);
                 EnableCursor();
             } else {
                 DisableCursor();
             }
         }
 
-        anyModalOpen = supplier.IsMenuOpen() || priceMgr.IsMenuOpen() || finance.IsMenuOpen();
+        if (IsKeyPressed(KEY_R)) {
+            bool nextState = !reputation.IsMenuOpen();
+            reputation.SetMenuOpen(nextState);
+            if (nextState) {
+                supplier.SetMenuOpen(false);
+                priceMgr.SetMenuOpen(false);
+                finance.SetMenuOpen(false);
+                EnableCursor();
+            } else {
+                DisableCursor();
+            }
+        }
+
+        anyModalOpen = supplier.IsMenuOpen() || priceMgr.IsMenuOpen() || finance.IsMenuOpen() || reputation.IsMenuOpen();
 
         // -------------------------------------------------------------
         // Supplier Modal Inputs
@@ -310,6 +332,21 @@ int main() {
                 topNoticeColor = { 20, 130, 60, 235 };
                 topNoticeTimer = 3.5f;
             }
+
+            // Customer leaves / exits shop -> Record rating exactly once
+            if ((cust.GetState() == CustomerState::LEAVING || cust.GetState() == CustomerState::EXITING || cust.GetState() == CustomerState::DESPAWNED) && !cust.HasGivenRating()) {
+                cust.MarkRatingGiven();
+                int stars = 0;
+                std::string feedback = "";
+                reputation.RecordRating(cust.GetId(), cust.GetName(), cust.GetSatisfaction(), cust.GetHeldProductName(), cust.DidSuccessfullyBuy(), stars, feedback);
+
+                // Rating & feedback notification
+                std::string starStr = "";
+                for (int s = 0; s < stars; ++s) starStr += "*";
+                topNotice = cust.GetName() + " memberi rating " + std::to_string(stars) + "/5 (" + feedback + ")";
+                topNoticeColor = (stars >= 4) ? Color{ 46, 204, 113, 235 } : (stars == 3) ? Color{ 243, 156, 18, 235 } : Color{ 231, 76, 60, 235 };
+                topNoticeTimer = 3.5f;
+            }
         }
         shop.GetCashier().SetQueueCount(cashierQueueCount);
 
@@ -341,44 +378,55 @@ int main() {
 
             // 2D HUD / UI Rendering
             // Top-Left Controls & Status Box
-            DrawRectangle(15, 15, 340, 290, { 15, 20, 25, 225 });
-            DrawRectangleLines(15, 15, 340, 290, { 70, 85, 100, 255 });
+            DrawRectangle(15, 15, 345, 310, { 15, 20, 25, 225 });
+            DrawRectangleLines(15, 15, 345, 310, { 70, 85, 100, 255 });
 
-            DrawText("SHOP SIMULATOR 3D (Tahap 7)", 25, 23, 16, { 255, 215, 0, 255 });
+            DrawText("SHOP SIMULATOR 3D (Tahap 8)", 25, 23, 16, { 255, 215, 0, 255 });
             DrawText("WASD     : Bergerak", 25, 44, 13, RAYWHITE);
             DrawText("Mouse    : Kontrol Kamera", 25, 62, 13, RAYWHITE);
             DrawText("E        : Interaksi Rak / Storage", 25, 80, 13, { 100, 230, 100, 255 });
             DrawText("TAB      : Menu Supplier & Order", 25, 98, 13, { 255, 180, 50, 255 });
             DrawText("P        : Manajemen Harga Jual", 25, 116, 13, { 100, 200, 255, 255 });
             DrawText("F        : Ringkasan Keuangan Toko", 25, 134, 13, { 255, 220, 80, 255 });
-            DrawText("ESC      : Keluar Game / Tutup Menu", 25, 152, 13, { 255, 100, 100, 255 });
+            DrawText("R        : Reputasi & Rating Toko", 25, 152, 13, { 241, 196, 15, 255 });
+            DrawText("ESC      : Keluar Game / Tutup Menu", 25, 170, 13, { 255, 100, 100, 255 });
 
             // Carried Product Status
             std::string carriedText = "Membawa: " + player.GetHeldProductName();
             Color carriedColor = player.IsHoldingProduct() ? Color{ 255, 220, 50, 255 } : Color{ 180, 190, 200, 255 };
-            DrawText(carriedText.c_str(), 25, 174, 14, carriedColor);
+            DrawText(carriedText.c_str(), 25, 192, 14, carriedColor);
 
-            // Treasury / Money Balance (HUD focused on Saldo Toko)
+            // Treasury / Money Balance & Reputation HUD
             std::string moneyText = "Uang Toko: Rp" + std::to_string(finance.GetCurrentBalance());
-            DrawText(moneyText.c_str(), 25, 196, 17, { 50, 255, 120, 255 });
+            DrawText(moneyText.c_str(), 25, 212, 16, { 50, 255, 120, 255 });
+
+            // Rating & Reputation Indicators on HUD
+            std::string repHudText = "";
+            if (reputation.HasRatings()) {
+                repHudText = "Rating: " + std::string(TextFormat("%.1f/5", reputation.GetAverageRating())) +
+                             " | Reputasi: " + std::to_string(reputation.GetReputation()) + "/100";
+            } else {
+                repHudText = "Rating: Belum ada | Reputasi: " + std::to_string(reputation.GetReputation()) + "/100";
+            }
+            DrawText(repHudText.c_str(), 25, 234, 13, { 255, 215, 0, 255 });
 
             // Storage Stock Summary
             std::string storageInfo = "Storage: Minuman " + std::to_string(shop.GetStorage().GetBeverageStock()) +
                                       " | Roti " + std::to_string(shop.GetStorage().GetBreadStock()) +
                                       " | Kaleng " + std::to_string(shop.GetStorage().GetCannedFoodStock());
-            DrawText(storageInfo.c_str(), 25, 224, 12, { 255, 200, 120, 255 });
+            DrawText(storageInfo.c_str(), 25, 256, 12, { 255, 200, 120, 255 });
 
             // Customer / Cashier Status Debug
             std::string custCountText = "Customer: " + std::to_string(customers.size()) + "/" + std::to_string(maxActiveCustomers) +
                                         " | Antrian Kasir: " + std::to_string(cashierQueueCount);
-            DrawText(custCountText.c_str(), 25, 244, 12, { 100, 220, 255, 255 });
+            DrawText(custCountText.c_str(), 25, 274, 12, { 100, 220, 255, 255 });
 
             if (!customers.empty()) {
                 const auto& activeCust = customers.front();
-                std::string custInfo = activeCust.GetName() + " -> " + activeCust.GetStateString();
-                DrawText(custInfo.c_str(), 25, 264, 12, { 200, 230, 250, 255 });
+                std::string custInfo = activeCust.GetName() + " -> " + activeCust.GetStateString() + " (" + std::to_string(activeCust.GetSatisfaction()) + "%)";
+                DrawText(custInfo.c_str(), 25, 292, 12, { 200, 230, 250, 255 });
             } else {
-                DrawText("Menunggu customer baru...", 25, 264, 12, { 140, 150, 160, 255 });
+                DrawText("Menunggu customer baru...", 25, 292, 12, { 140, 150, 160, 255 });
             }
 
             // Center Interaction Prompt (When player aims at rack or storage pallet)
@@ -751,6 +799,92 @@ int main() {
                          modalX + 45, modalY + 420, 13, { 255, 220, 120, 255 });
             }
 
+            // ==========================================
+            // STORE REPUTATION & RATING MODAL MENU (R)
+            // ==========================================
+            if (reputation.IsMenuOpen()) {
+                DrawRectangle(0, 0, screenWidth, screenHeight, { 0, 0, 0, 160 });
+
+                int modalW = 620;
+                int modalH = 470;
+                int modalX = (screenWidth - modalW) / 2;
+                int modalY = (screenHeight - modalH) / 2;
+
+                DrawRectangle(modalX, modalY, modalW, modalH, { 26, 28, 38, 250 });
+                DrawRectangleLines(modalX, modalY, modalW, modalH, { 241, 196, 15, 255 });
+
+                DrawText("REPUTASI DAN RATING TOKO", modalX + 30, modalY + 22, 20, { 255, 215, 0, 255 });
+                DrawText("Evaluasi kepuasan customer, skor rating bintang, dan reputasi bisnis", modalX + 30, modalY + 48, 13, { 180, 195, 210, 255 });
+
+                // 3 Main Metric Cards in top area
+                int cardW = 175;
+                int cardH = 80;
+
+                // 1. Reputasi Toko (0 - 100)
+                int c1X = modalX + 30;
+                int c1Y = modalY + 75;
+                DrawRectangle(c1X, c1Y, cardW, cardH, { 35, 38, 50, 240 });
+                DrawRectangleLines(c1X, c1Y, cardW, cardH, { 241, 196, 15, 255 });
+                DrawText("Reputasi Toko:", c1X + 12, c1Y + 12, 13, { 200, 210, 225, 255 });
+                std::string repValStr = std::to_string(reputation.GetReputation()) + " / 100";
+                Color repColor = (reputation.GetReputation() >= 75) ? Color{ 46, 204, 113, 255 } :
+                                 (reputation.GetReputation() >= 50) ? Color{ 241, 196, 15, 255 } : Color{ 231, 76, 60, 255 };
+                DrawText(repValStr.c_str(), c1X + 12, c1Y + 38, 20, repColor);
+
+                // 2. Average Rating (1.0 - 5.0)
+                int c2X = modalX + 222;
+                int c2Y = modalY + 75;
+                DrawRectangle(c2X, c2Y, cardW, cardH, { 35, 38, 50, 240 });
+                DrawRectangleLines(c2X, c2Y, cardW, cardH, { 52, 152, 219, 255 });
+                DrawText("Rata-rata Rating:", c2X + 12, c2Y + 12, 13, { 200, 210, 225, 255 });
+                std::string avgStr = reputation.HasRatings() ? TextFormat("%.1f / 5.0", reputation.GetAverageRating()) : "Belum ada";
+                DrawText(avgStr.c_str(), c2X + 12, c2Y + 38, 20, { 100, 220, 255, 255 });
+
+                // 3. Total Customer Reviewers
+                int c3X = modalX + 415;
+                int c3Y = modalY + 75;
+                DrawRectangle(c3X, c3Y, cardW, cardH, { 35, 38, 50, 240 });
+                DrawRectangleLines(c3X, c3Y, cardW, cardH, { 46, 204, 113, 255 });
+                DrawText("Jumlah Rating:", c3X + 12, c3Y + 12, 13, { 200, 210, 225, 255 });
+                std::string countStr = std::to_string(reputation.GetTotalRatings()) + " Ulasan";
+                DrawText(countStr.c_str(), c3X + 12, c3Y + 38, 20, { 50, 255, 120, 255 });
+
+                // Rating & Feedback history list
+                DrawText("Ulasan & Kepuasan Customer Terbaru:", modalX + 30, modalY + 172, 14, { 255, 215, 0, 255 });
+                int rBoxY = modalY + 195;
+                DrawRectangle(modalX + 30, rBoxY, modalW - 60, 210, { 20, 22, 30, 240 });
+                DrawRectangleLines(modalX + 30, rBoxY, modalW - 60, 210, { 60, 70, 80, 255 });
+
+                const auto& ratings = reputation.GetRecentRatings();
+                if (ratings.empty()) {
+                    DrawText("Belum ada rating customer tercatat.", modalX + 50, rBoxY + 90, 13, { 140, 150, 160, 255 });
+                    DrawText("Customer yang selesai berbelanja akan memberikan rating & feedback.", modalX + 50, rBoxY + 115, 12, { 110, 120, 130, 255 });
+                } else {
+                    int rRowY = rBoxY + 12;
+                    for (size_t i = 0; i < ratings.size() && i < 4; ++i) {
+                        const auto& r = ratings[i];
+                        Color starColor = (r.stars >= 4) ? Color{ 255, 215, 0, 255 } : (r.stars == 3) ? Color{ 243, 156, 18, 255 } : Color{ 231, 76, 60, 255 };
+
+                        // Star string
+                        std::string starsIcon = "";
+                        for (int s = 0; s < r.stars; ++s) starsIcon += "* ";
+
+                        DrawText(r.customerName.c_str(), modalX + 45, rRowY, 14, RAYWHITE);
+                        DrawText(starsIcon.c_str(), modalX + 150, rRowY, 14, starColor);
+                        DrawText(("(" + std::to_string(r.stars) + "/5)").c_str(), modalX + 220, rRowY, 12, { 180, 190, 200, 255 });
+                        
+                        std::string fbText = "\"" + r.feedback + "\" (" + std::to_string(r.satisfaction) + "% kepuasan)";
+                        DrawText(fbText.c_str(), modalX + 280, rRowY, 12, starColor);
+
+                        rRowY += 48;
+                    }
+                }
+
+                // Footer
+                DrawText("5 Bintang: +3 Reputasi | 4 Bintang: +1 | 3 Bintang: 0 | 2 Bintang: -2 | 1 Bintang: -3    [R / ESC] Tutup",
+                         modalX + 35, modalY + 420, 12, { 255, 220, 120, 255 });
+            }
+
         EndDrawing();
     }
 
@@ -759,4 +893,5 @@ int main() {
 
     return 0;
 }
+
 

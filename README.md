@@ -124,6 +124,51 @@ Game simulasi toko 3D modern berbasis C++17 dan raylib 5.0 tanpa game engine ber
 - **HUD Bersih & Ringkas**:
   - HUD utama tetap fokus menampilkan saldo toko aktual (`Uang Toko: RpXXXXX`) tanpa mengaburkan pandangan permainan.
 
+## Fitur Tahap 8 (Sistem Kepuasan Customer, Rating, dan Reputasi Toko)
+- **Skor Kepuasan Customer / Satisfaction (`0 - 100`)**:
+  - Setiap customer yang masuk memiliki kepuasan awal bernilai **100%** (Sangat Puas).
+  - Skor kepuasan dipengaruhi secara dinamis oleh pengalaman berbelanja:
+    - **Berhasil Mendapatkan Produk**: Bonus `+10` kepuasan.
+    - **Berhasil Membayar di Kasir**: Bonus `+10` kepuasan.
+    - **Rak Pilihan Kosong / Pindah Rak**: Penalti `-10` kepuasan.
+    - **Semua Produk Habis (Keluar Tanpa Beli)**: Penalti `-20` kepuasan.
+    - **Waktu Antrean Kasir**:
+      - `<= 5 detik`: Tidak ada penalti.
+      - `5 - 10 detik`: Penalti `-5` kepuasan.
+      - `10 - 20 detik`: Penalti `-10` kepuasan kumulatif.
+      - `> 20 detik`: Penalti `-20` kepuasan kumulatif.
+  - Skor diproteksi fungsi clamp: `0 <= satisfaction <= 100`.
+  - Sistem penalti dan bonus menerapkan flag *single-trigger* sehingga tidak dieksekusi berulang per frame.
+- **Konversi Rating Bintang Customer (`1 - 5 Bintang`)**:
+  - Dihitung saat customer selesai berbelanja dan melangkah keluar toko:
+    - `90 - 100`: **5 Bintang** (*"Customer sangat puas!"*)
+    - `75 - 89`: **4 Bintang** (*"Customer puas."*)
+    - `55 - 74`: **3 Bintang** (*"Customer cukup puas."*)
+    - `35 - 54`: **2 Bintang** (*"Customer kurang puas."*)
+    - `0 - 34`: **1 Bintang** (*"Customer kecewa."*)
+  - Satu customer dijamin hanya memberikan rating tepat **1 kali**.
+- **Sistem Rating Rata-Rata & Reputasi Toko (`Reputation.hpp`, `Reputation.cpp`)**:
+  - **Reputasi Toko (`0 - 100`)**: Dimulai dari nilai awal **50**.
+  - Reputasi bertumbuh secara bertahap dan adil berdasarkan rating customer:
+    - `5 Bintang`: `+3` Reputasi
+    - `4 Bintang`: `+1` Reputasi
+    - `3 Bintang`: `0` Perubahan
+    - `2 Bintang`: `-2` Reputasi
+    - `1 Bintang`: `-3` Reputasi
+  - **Rata-rata Rating Toko (`Average Rating`)**: Dihitung dari `Total Rating Points / Total Ratings` (aman terhadap pembagian nol jika belum ada customer).
+- **Menu Reputasi & Rating Toko (Tombol `R`)**:
+  - Modal UI interaktif untuk meninjau status reputasi toko:
+    - Kartu Reputasi Toko Real-Time (`XX / 100`).
+    - Kartu Rata-rata Rating Bintang (`X.X / 5.0`).
+    - Kartu Total Customer yang Memberikan Ulasan (`XX Ulasan`).
+    - Riwayat ulasan bintang, feedback teks, dan persentase kepuasan customer terbaru.
+- **Banner Notifikasi Feedback & Rating**:
+  - Menampilkan ulasan instan saat customer selesai: `"[Nama] memberi rating X/5 (Feedback)"`.
+- **Integrasi HUD Ringkas**:
+  - Menampilkan ringkasan status toko secara elegan pada panel kontrol:
+    - `Uang Toko: RpXXXXX`
+    - `Rating: X.X/5 | Reputasi: XX/100`
+
 ## Struktur Project
 ```text
 shop-simulator/
@@ -132,26 +177,28 @@ shop-simulator/
 ├── include/            # C++ Header files
 │   ├── Cashier.hpp     # Class Cashier (counter 3D, NPC kasir, POS terminal, antrian, & transaksi)
 │   ├── Common.hpp      # Struktur matematika & AABB bounding box
-│   ├── Customer.hpp    # Class Customer (FSM, shopping, cashier queue & payment)
+│   ├── Customer.hpp    # Class Customer (FSM, shopping, cashier queue, payment, satisfaction & rating)
 │   ├── Finance.hpp     # Single source of truth keuangan (saldo, revenue, expenses, profit/loss)
 │   ├── Player.hpp      # Controller first person, held item & feedback
 │   ├── PriceManager.hpp# Manajemen harga jual produk, validasi harga & margin unit
 │   ├── Product.hpp     # Definisi produk, harga jual, harga beli supplier, & visual
 │   ├── Rack.hpp        # Class Rack (stok rak, kapasitas maks, visual items di rak & interaksi)
+│   ├── Reputation.hpp  # Sistem reputasi toko, rata-rata rating, konversi bintang & ulasan customer
 │   ├── Shop.hpp        # Geometri toko, layout rak, kasir, storage pallets & collision list
 │   ├── Storage.hpp     # Class Storage (pallet kayu 3D, visual tumpukan kardus & stok gudang)
 │   └── Supplier.hpp    # Class Supplier (katalog produk supplier, order queue & delivery timer)
 ├── src/                # C++ Source files
 │   ├── Cashier.cpp     # Render kasir 3D, NPC kasir berseragam, mesin register & pembayaran
-│   ├── Customer.cpp    # Navigasi lorong, antrean kasir, checkout & status tag
+│   ├── Customer.cpp    # Navigasi lorong, antrean kasir, checkout, scoring kepuasan & rating
 │   ├── Finance.cpp     # Pencatatan transaksi pendapatan, pengeluaran & perhitungan profit
 │   ├── Player.cpp      # Pergerakan, first-person camera & render held item
 │   ├── PriceManager.cpp# Penyesuaian harga jual, validasi batas & kalkulasi margin
 │   ├── Rack.cpp        # Implementasi render rak bertingkat, batas kapasitas & visual produk
+│   ├── Reputation.cpp  # Kalkulasi rata-rata rating, penyesuaian reputasi toko & riwayat ulasan
 │   ├── Shop.cpp        # Layout toko, penempatan rak, kasir, storage gudang, waypoint & collider
 │   ├── Storage.cpp     # Render pallet gudang 3D & manajemen stok gudang
 │   ├── Supplier.cpp    # Pengadaan barang, countdown delivery & transfer stok otomatis ke gudang
-│   └── main.cpp        # Game loop, modal Supplier (TAB), Harga (P), Keuangan (F), & HUD
+│   └── main.cpp        # Game loop, modal Supplier (TAB), Harga (P), Keuangan (F), Reputasi (R), & HUD
 └── assets/             # Direktori aset (models, textures, sounds, fonts)
 ```
 
@@ -162,6 +209,7 @@ shop-simulator/
 - **TAB**: Buka / Tutup Menu Pengadaan Barang Supplier
 - **P**: Buka / Tutup Menu Manajemen Harga Jual
 - **F**: Buka / Tutup Menu Ringkasan Keuangan Toko
+- **R**: Buka / Tutup Menu Reputasi & Rating Toko
 - **Panah / W, S, A, D**: Navigasi dan atur kuantitas / harga pada menu yang terbuka
 - **ENTER**: Eksekusi Pembelian Pesanan Supplier
 - **ESC**: Tutup Menu Aktif / Keluar dari game

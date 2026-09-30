@@ -1,6 +1,7 @@
 #include "Customer.hpp"
 #include "Shop.hpp"
 #include <cmath>
+#include <algorithm>
 
 Customer::Customer()
     : id(0),
@@ -19,6 +20,16 @@ Customer::Customer()
       payTimer(0.0f),
       hasPaid(false),
       heldProduct(ProductType::NONE),
+      satisfaction(100),
+      totalQueueWaitTime(0.0f),
+      penaltyWait5Applied(false),
+      penaltyWait10Applied(false),
+      penaltyWait20Applied(false),
+      penaltyNoStockApplied(false),
+      penaltySwitchRackApplied(false),
+      bonusProductAcquired(false),
+      bonusPaymentSuccess(false),
+      hasGivenRating(false),
       bodyColor{ 255, 218, 185, 255 },
       shirtColor{ 70, 130, 180, 255 },
       pantsColor{ 45, 52, 54, 255 },
@@ -43,6 +54,16 @@ Customer::Customer(int id, const std::string& name, Vector3 spawnPos, Color body
       payTimer(0.0f),
       hasPaid(false),
       heldProduct(ProductType::NONE),
+      satisfaction(100),
+      totalQueueWaitTime(0.0f),
+      penaltyWait5Applied(false),
+      penaltyWait10Applied(false),
+      penaltyWait20Applied(false),
+      penaltyNoStockApplied(false),
+      penaltySwitchRackApplied(false),
+      bonusProductAcquired(false),
+      bonusPaymentSuccess(false),
+      hasGivenRating(false),
       bodyColor(bodyColor),
       shirtColor(shirtColor),
       pantsColor{ 50, 55, 60, 255 },
@@ -182,7 +203,11 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
             waypoints.push_back({ 0.0f, 0.0f, targetRackPos.z });
             waypoints.push_back(targetRackPos);
         } else {
-            // All racks empty -> Leave without product
+            // All racks empty -> Penalti produk habis (-20) & Leave without product
+            if (!penaltyNoStockApplied) {
+                satisfaction = std::clamp(satisfaction - 20, 0, 100);
+                penaltyNoStockApplied = true;
+            }
             state = CustomerState::LEAVING;
             BuildExitWaypoints(position);
         }
@@ -213,6 +238,10 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
         if (targetRackId >= 0 && (size_t)targetRackId < racks.size() && racks[(size_t)targetRackId].HasStock()) {
             if (racks[(size_t)targetRackId].TakeProduct()) {
                 heldProduct = targetProductType;
+                if (!bonusProductAcquired) {
+                    satisfaction = std::clamp(satisfaction + 10, 0, 100);
+                    bonusProductAcquired = true;
+                }
             }
         }
 
@@ -222,7 +251,11 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
             Vector3 queueSlot = shop.GetCashier().GetQueuePosition(queueIndex);
             BuildPathToCashier(queueSlot);
         } else {
-            // Did not get product -> Try another or leave
+            // Did not get initial product -> Penalti pindah rak (-10) & try another or leave
+            if (!penaltySwitchRackApplied) {
+                satisfaction = std::clamp(satisfaction - 10, 0, 100);
+                penaltySwitchRackApplied = true;
+            }
             bool foundAnother = SelectAvailableRack(shop);
             if (foundAnother) {
                 state = CustomerState::WALKING_TO_SHELF;
@@ -231,6 +264,11 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
                 waypoints.push_back({ 0.0f, 0.0f, targetRackPos.z });
                 waypoints.push_back(targetRackPos);
             } else {
+                // All other racks also empty -> Penalti produk tidak tersedia sama sekali (-20 total)
+                if (!penaltyNoStockApplied) {
+                    satisfaction = std::clamp(satisfaction - 10, 0, 100);
+                    penaltyNoStockApplied = true;
+                }
                 state = CustomerState::LEAVING;
                 BuildExitWaypoints(position);
             }
@@ -267,6 +305,21 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
         }
     }
     else if (state == CustomerState::WAITING_FOR_CASHIER) {
+        // Track waiting time in queue line
+        totalQueueWaitTime += deltaTime;
+
+        // Waiting time penalties (evaluated in tiered stages, applied exactly once per stage)
+        if (totalQueueWaitTime > 20.0f && !penaltyWait20Applied) {
+            satisfaction = std::clamp(satisfaction - 10, 0, 100); // cumulative -20
+            penaltyWait20Applied = true;
+        } else if (totalQueueWaitTime > 10.0f && !penaltyWait10Applied) {
+            satisfaction = std::clamp(satisfaction - 5, 0, 100); // cumulative -10
+            penaltyWait10Applied = true;
+        } else if (totalQueueWaitTime > 5.0f && !penaltyWait5Applied) {
+            satisfaction = std::clamp(satisfaction - 5, 0, 100); // -5
+            penaltyWait5Applied = true;
+        }
+
         // Continuously advance towards assigned queue position as line moves forward
         Vector3 assignedSlot = shop.GetCashier().GetQueuePosition(queueIndex);
         float distToSlot = Vector3Distance(position, assignedSlot);
@@ -291,6 +344,12 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
                 outDidPay = true;
                 outPaidAmount = amount;
                 outPaidProduct = GetHeldProductName();
+
+                // Bonus payment success (+10)
+                if (!bonusPaymentSuccess) {
+                    satisfaction = std::clamp(satisfaction + 10, 0, 100);
+                    bonusPaymentSuccess = true;
+                }
             }
             
             // Transaction finished -> customer leaves shop

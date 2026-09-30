@@ -32,6 +32,7 @@ set(SOURCES
     src/Supplier.cpp
     src/Finance.cpp
     src/PriceManager.cpp
+    src/Reputation.cpp
 )
 
 # Header files for IDE navigation
@@ -47,6 +48,7 @@ set(HEADERS
     include/Common.hpp
     include/Finance.hpp
     include/PriceManager.hpp
+    include/Reputation.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

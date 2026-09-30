@@ -48,6 +48,13 @@ public:
                state == CustomerState::PAYING;
     }
 
+    // Tahap 8: Customer Satisfaction & Rating
+    int GetSatisfaction() const { return satisfaction; }
+    bool HasGivenRating() const { return hasGivenRating; }
+    void MarkRatingGiven() { hasGivenRating = true; }
+    float GetTotalQueueWaitTime() const { return totalQueueWaitTime; }
+    bool DidSuccessfullyBuy() const { return hasPaid && heldProduct != ProductType::NONE; }
+
 private:
     int id;
     std::string name;
@@ -75,6 +82,18 @@ private:
 
     // Carried product inventory (Max 1 product)
     ProductType heldProduct;
+
+    // Tahap 8: Satisfaction tracking & single-trigger penalty flags
+    int satisfaction;              // 0 - 100 (Awal: 100)
+    float totalQueueWaitTime;      // Waktu menunggu di antrean kasir (detik)
+    bool penaltyWait5Applied;      // Penalti tunggu 5-10s (-5)
+    bool penaltyWait10Applied;     // Penalti tunggu 10-20s (-10)
+    bool penaltyWait20Applied;     // Penalti tunggu >20s (-20)
+    bool penaltyNoStockApplied;    // Penalti produk habis (-20)
+    bool penaltySwitchRackApplied; // Penalti produk habis lalu pindah rak (-10)
+    bool bonusProductAcquired;     // Bonus berhasil dapat produk (+10)
+    bool bonusPaymentSuccess;      // Bonus berhasil bayar kasir (+10)
+    bool hasGivenRating;           // Memastikan rating hanya dicatat tepat 1 kali
 
     // Visual attributes
     Color bodyColor;  // Skin/head tone
