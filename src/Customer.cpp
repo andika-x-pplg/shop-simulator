@@ -140,7 +140,7 @@ void Customer::Say(const std::string& text, float duration, Color bubbleColor, C
     speechCooldown = 2.0f;
 }
 
-void Customer::GenerateShoppingList() {
+void Customer::GenerateShoppingList(ProductType popularProductPreference) {
     shoppingList.clear();
     carriedItems.clear();
     currentShoppingItemIndex = 0;
@@ -160,7 +160,7 @@ void Customer::GenerateShoppingList() {
         }
         case CustomerType::IMPATIENT: {
             // Impatient buys quickly 1 item
-            ProductType p = allProducts[id % allProducts.size()];
+            ProductType p = (popularProductPreference != ProductType::NONE && (id % 2 == 0)) ? popularProductPreference : allProducts[id % allProducts.size()];
             shoppingList.push_back({ p, 1, 0 });
             break;
         }
@@ -176,7 +176,7 @@ void Customer::GenerateShoppingList() {
         }
         case CustomerType::PATIENT: {
             // Patient customer buys 1 to 3 items
-            ProductType p1 = allProducts[id % allProducts.size()];
+            ProductType p1 = (popularProductPreference != ProductType::NONE && (id % 3 == 0)) ? popularProductPreference : allProducts[id % allProducts.size()];
             shoppingList.push_back({ p1, 1, 0 });
             if (id % 2 == 0) {
                 ProductType p2 = allProducts[(id + 2) % allProducts.size()];
@@ -186,13 +186,27 @@ void Customer::GenerateShoppingList() {
         }
         case CustomerType::NORMAL:
         default: {
-            ProductType p1 = allProducts[id % allProducts.size()];
+            ProductType p1 = (popularProductPreference != ProductType::NONE && (id % 2 == 0)) ? popularProductPreference : allProducts[id % allProducts.size()];
             shoppingList.push_back({ p1, 1, 0 });
             if (id % 3 == 0) {
                 ProductType p2 = allProducts[(id + 3) % allProducts.size()];
                 shoppingList.push_back({ p2, 1, 0 });
             }
             break;
+        }
+    }
+
+    // If popular product event is active and not already on list, high chance to add it
+    if (popularProductPreference != ProductType::NONE && (id % 2 == 0)) {
+        bool alreadyHas = false;
+        for (const auto& item : shoppingList) {
+            if (item.product == popularProductPreference) {
+                alreadyHas = true;
+                break;
+            }
+        }
+        if (!alreadyHas) {
+            shoppingList.push_back({ popularProductPreference, 1, 0 });
         }
     }
 }

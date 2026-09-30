@@ -16,6 +16,7 @@ class Supplier;
 class GameTime;
 class DailyStats;
 class EmployeeManager;
+class RandomEventManager;
 
 struct EmployeeSaveData {
     int id;
@@ -123,6 +124,19 @@ struct SaveData {
     std::vector<EmployeeSaveData> activeEmployees;
     std::vector<EmployeeSaveData> candidateEmployees;
 
+    // Random Events & Challenges (Tahap 18)
+    int activeEventId;
+    float activeEventDuration;
+    int activeEventProduct;
+    int challengeId;
+    int challengeTarget;
+    int challengeCurrent;
+    int challengeProduct;
+    int challengeMoneyReward;
+    int challengeRepReward;
+    bool challengeCompleted;
+    bool challengeRewardClaimed;
+
     SaveData();
 };
 
@@ -145,6 +159,7 @@ public:
                   const GameTime& gameTime,
                   const DailyStats& dailyStats,
                   const EmployeeManager& employeeMgr,
+                  const RandomEventManager& eventMgr,
                   std::string& outMessage);
 
     bool LoadGame(const std::string& filepath,
@@ -159,6 +174,7 @@ public:
                   GameTime& gameTime,
                   DailyStats& dailyStats,
                   EmployeeManager& employeeMgr,
+                  RandomEventManager& eventMgr,
                   std::string& outMessage);
 
     bool HasSaveGame(const std::string& filepath) const;

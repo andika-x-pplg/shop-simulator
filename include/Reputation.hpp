@@ -21,6 +21,9 @@ public:
 
     // Reputasi (0 - 100)
     int GetReputation() const { return reputation; }
+    void AddReputation(int points) {
+        reputation = (reputation + points > 100) ? 100 : ((reputation + points < 0) ? 0 : (reputation + points));
+    }
     
     // Rating Toko
     int GetTotalRatings() const { return totalRatings; }

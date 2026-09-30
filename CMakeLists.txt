@@ -41,6 +41,7 @@ set(SOURCES
     src/AudioManager.cpp
     src/Employee.cpp
     src/EmployeeManager.cpp
+    src/RandomEventManager.cpp
 )
 
 # Header files for IDE navigation
@@ -65,6 +66,7 @@ set(HEADERS
     include/AudioManager.hpp
     include/Employee.hpp
     include/EmployeeManager.hpp
+    include/RandomEventManager.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

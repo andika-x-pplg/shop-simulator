@@ -10,6 +10,7 @@
 #include "GameTime.hpp"
 #include "DailyStats.hpp"
 #include "EmployeeManager.hpp"
+#include "RandomEventManager.hpp"
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -34,7 +35,10 @@ SaveData::SaveData()
       sellPriceBiscuit(9000), sellPriceJuice(10000),
       shopSizeLevel(1), shelfCapacityLevel(1), storageCapacityLevel(1), customerCapacityLevel(1),
       tableOwned(false), chairOwned(false), displayShelfOwned(false), cabinetOwned(false), decorationPlantOwned(false),
-      betterDisplayOwned(false), extraStorageRackOwned(false), betterCashierOwned(false)
+      betterDisplayOwned(false), extraStorageRackOwned(false), betterCashierOwned(false),
+      activeEventId(0), activeEventDuration(0.0f), activeEventProduct(0),
+      challengeId(0), challengeTarget(0), challengeCurrent(0), challengeProduct(0),
+      challengeMoneyReward(0), challengeRepReward(0), challengeCompleted(false), challengeRewardClaimed(false)
 {
 }
 
@@ -130,6 +134,7 @@ bool SaveSystem::SaveGame(const std::string& filepath,
                           const GameTime& gameTime,
                           const DailyStats& dailyStats,
                           const EmployeeManager& employeeMgr,
+                          const RandomEventManager& eventMgr,
                           std::string& outMessage)
 {
     EnsureSaveDirectoryExists(filepath);
@@ -217,6 +222,19 @@ bool SaveSystem::SaveGame(const std::string& filepath,
         data.activeEmployees.push_back({ emp.id, emp.name, (int)emp.role, emp.salary, emp.hiringCost, emp.level, emp.experience, emp.skill, emp.morale, emp.productivity, (int)emp.status, emp.isHired });
     }
 
+    // Stage 18 Events & Challenges
+    data.activeEventId = eventMgr.GetActiveEventId();
+    data.activeEventDuration = eventMgr.GetActiveEventDuration();
+    data.activeEventProduct = eventMgr.GetActiveEventProduct();
+    data.challengeId = eventMgr.GetChallengeId();
+    data.challengeTarget = eventMgr.GetChallengeTarget();
+    data.challengeCurrent = eventMgr.GetChallengeCurrent();
+    data.challengeProduct = eventMgr.GetChallengeProduct();
+    data.challengeMoneyReward = eventMgr.GetChallengeMoneyReward();
+    data.challengeRepReward = eventMgr.GetChallengeRepReward();
+    data.challengeCompleted = eventMgr.IsChallengeCompleted();
+    data.challengeRewardClaimed = eventMgr.IsChallengeRewardClaimed();
+
     // Write structured JSON formatted save
     file << "{\n";
     file << "  \"saveVersion\": " << data.saveVersion << ",\n";
@@ -287,6 +305,19 @@ bool SaveSystem::SaveGame(const std::string& filepath,
     file << "    \"betterDisplay\": " << (data.betterDisplayOwned ? "true" : "false") << ",\n";
     file << "    \"extraStorage\": " << (data.extraStorageRackOwned ? "true" : "false") << ",\n";
     file << "    \"betterCashier\": " << (data.betterCashierOwned ? "true" : "false") << "\n";
+    file << "  },\n";
+    file << "  \"events\": {\n";
+    file << "    \"eventId\": " << data.activeEventId << ",\n";
+    file << "    \"eventDuration\": " << data.activeEventDuration << ",\n";
+    file << "    \"eventProduct\": " << data.activeEventProduct << ",\n";
+    file << "    \"chId\": " << data.challengeId << ",\n";
+    file << "    \"chTarget\": " << data.challengeTarget << ",\n";
+    file << "    \"chCurrent\": " << data.challengeCurrent << ",\n";
+    file << "    \"chProduct\": " << data.challengeProduct << ",\n";
+    file << "    \"chMoney\": " << data.challengeMoneyReward << ",\n";
+    file << "    \"chRep\": " << data.challengeRepReward << ",\n";
+    file << "    \"chCompleted\": " << (data.challengeCompleted ? "true" : "false") << ",\n";
+    file << "    \"chClaimed\": " << (data.challengeRewardClaimed ? "true" : "false") << "\n";
     file << "  },\n";
     file << "  \"activeOrders\": [\n";
     for (size_t i = 0; i < data.activeOrders.size(); ++i) {
@@ -367,6 +398,7 @@ bool SaveSystem::LoadGame(const std::string& filepath,
                           GameTime& gameTime,
                           DailyStats& dailyStats,
                           EmployeeManager& employeeMgr,
+                          RandomEventManager& eventMgr,
                           std::string& outMessage)
 {
     if (!HasSaveGame(filepath)) {
@@ -451,6 +483,19 @@ bool SaveSystem::LoadGame(const std::string& filepath,
     data.betterDisplayOwned = ReadBool(content, "betterDisplay", false);
     data.extraStorageRackOwned = ReadBool(content, "extraStorage", false);
     data.betterCashierOwned = ReadBool(content, "betterCashier", false);
+
+    // Events & Challenges (Stage 18)
+    data.activeEventId = ReadInt(content, "eventId", 0);
+    data.activeEventDuration = ReadFloat(content, "eventDuration", 0.0f);
+    data.activeEventProduct = ReadInt(content, "eventProduct", 0);
+    data.challengeId = ReadInt(content, "chId", 0);
+    data.challengeTarget = ReadInt(content, "chTarget", 0);
+    data.challengeCurrent = ReadInt(content, "chCurrent", 0);
+    data.challengeProduct = ReadInt(content, "chProduct", 0);
+    data.challengeMoneyReward = ReadInt(content, "chMoney", 0);
+    data.challengeRepReward = ReadInt(content, "chRep", 0);
+    data.challengeCompleted = ReadBool(content, "chCompleted", false);
+    data.challengeRewardClaimed = ReadBool(content, "chClaimed", false);
 
     ValidateSaveData(data, warn);
 
@@ -566,6 +611,11 @@ bool SaveSystem::LoadGame(const std::string& filepath,
         }
     }
     employeeMgr.RefreshCandidates();
+
+    // Deserialize Stage 18 Events & Challenges
+    eventMgr.LoadEventState(data.activeEventId, data.activeEventDuration, data.activeEventProduct,
+                           data.challengeId, data.challengeTarget, data.challengeCurrent, data.challengeProduct,
+                           data.challengeMoneyReward, data.challengeRepReward, data.challengeCompleted, data.challengeRewardClaimed);
 
     outMessage = "Game berhasil dimuat!";
     return true;

@@ -91,6 +91,8 @@ public:
     // Separation & crowd avoidance
     void ApplySeparation(const std::vector<Customer>& otherCustomers, float deltaTime);
 
+    void GenerateShoppingList(ProductType popularProductPreference = ProductType::NONE);
+
 private:
     int id;
     std::string name;
@@ -157,7 +159,6 @@ private:
     void BuildEntryWaypoints();
     void BuildExitWaypoints(Vector3 startPos);
     void BuildPathToCashier(Vector3 queueSlot);
-    void GenerateShoppingList();
     bool SearchTargetRack(Shop& shop);
     void RenderCarriedItems();
 };
