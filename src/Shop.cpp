@@ -71,25 +71,35 @@ void Shop::BuildStructure() {
 void Shop::BuildRacks() {
     racks.clear();
 
-    // Rack 1: Left-Back Aisle -> Minuman (Beverage), initial stock = 2, max stock = 10
-    racks.emplace_back(1, Vector3{ -5.5f, 1.1f, -4.0f }, Vector3{ 2.0f, 2.2f, 5.5f },
-                       ProductType::BEVERAGE, 2, 10,
-                       Color{ 110, 130, 150, 255 }, Color{ 140, 170, 200, 255 });
+    // Rack 1: Left-Back Aisle -> Minuman (Air Mineral / DRK-001)
+    racks.emplace_back(1, Vector3{ -5.5f, 1.1f, -4.5f }, Vector3{ 2.0f, 2.2f, 4.5f },
+                       ProductType::BEVERAGE, 4, 10,
+                       Color{ 100, 130, 160, 255 }, Color{ 130, 170, 210, 255 });
 
-    // Rack 2: Left-Front Aisle -> Roti (Bread), initial stock = 5, max stock = 10
-    racks.emplace_back(2, Vector3{ -5.5f, 1.1f, 3.5f }, Vector3{ 2.0f, 2.2f, 5.5f },
+    // Rack 2: Left-Front Aisle -> Roti Tawar (FOD-001)
+    racks.emplace_back(2, Vector3{ -5.5f, 1.1f, 3.5f }, Vector3{ 2.0f, 2.2f, 4.5f },
                        ProductType::BREAD, 5, 10,
                        Color{ 140, 110, 80, 255 }, Color{ 180, 140, 100, 255 });
 
-    // Rack 3: Right Aisle -> Makanan Kaleng (Canned Food), initial stock = 3, max stock = 10
-    racks.emplace_back(3, Vector3{ 5.5f, 1.1f, -2.5f }, Vector3{ 2.0f, 2.2f, 7.0f },
+    // Rack 3: Right-Back Aisle -> Makanan Kaleng (FOD-003)
+    racks.emplace_back(3, Vector3{ 5.5f, 1.1f, -4.5f }, Vector3{ 2.0f, 2.2f, 4.5f },
                        ProductType::CANNED_FOOD, 3, 10,
-                       Color{ 130, 90, 90, 255 }, Color{ 170, 120, 120, 255 });
+                       Color{ 140, 80, 80, 255 }, Color{ 180, 110, 110, 255 });
 
-    // Rack 4: Center Island Display Table -> Minuman promo (initial stock = 2, max stock = 10)
-    racks.emplace_back(4, Vector3{ 0.0f, 0.7f, -6.5f }, Vector3{ 3.0f, 1.4f, 4.0f },
-                       ProductType::BEVERAGE, 2, 10,
-                       Color{ 60, 100, 140, 255 }, Color{ 90, 140, 190, 255 });
+    // Rack 4: Right-Front Aisle -> Sabun Mandi (HOU-001)
+    racks.emplace_back(4, Vector3{ 5.5f, 1.1f, 3.5f }, Vector3{ 2.0f, 2.2f, 4.5f },
+                       ProductType::SOAP_BAR, 4, 10,
+                       Color{ 60, 140, 120, 255 }, Color{ 90, 180, 150, 255 });
+
+    // Rack 5: Center-Front Display -> Camilan / Biskuit Cokelat (SNK-001)
+    racks.emplace_back(5, Vector3{ 0.0f, 0.8f, -2.5f }, Vector3{ 2.8f, 1.6f, 3.2f },
+                       ProductType::SNACK_BISCUIT, 4, 10,
+                       Color{ 150, 100, 40, 255 }, Color{ 200, 150, 70, 255 });
+
+    // Rack 6: Center-Back Display -> Mie Instan (FOD-002)
+    racks.emplace_back(6, Vector3{ 0.0f, 0.8f, -7.0f }, Vector3{ 2.8f, 1.6f, 3.2f },
+                       ProductType::INSTANT_NOODLE, 4, 10,
+                       Color{ 160, 130, 40, 255 }, Color{ 210, 170, 60, 255 });
 }
 
 Vector3 Shop::GetRackFrontPosition(size_t rackIndex) const {
@@ -105,8 +115,8 @@ Vector3 Shop::GetRackFrontPosition(size_t rackIndex) const {
         // Right aisle racks: standing spot is inside the aisle (x = 3.2f)
         return { 3.2f, 0.0f, rackPos.z };
     } else {
-        // Center island: standing spot clearly in front of the island table (z = -3.6f)
-        return { 0.0f, 0.0f, -3.6f };
+        // Center island tables: standing spot on front side (+Z)
+        return { 0.0f, 0.0f, rackPos.z + 2.2f };
     }
 }
 
@@ -133,6 +143,16 @@ int Shop::FindRackWithProduct(ProductType type) const {
         }
     }
     return -1;
+}
+
+int Shop::GetProductStockOnShelves(ProductType type) const {
+    int total = 0;
+    for (const auto& r : racks) {
+        if (r.GetProductType() == type) {
+            total += r.GetStock();
+        }
+    }
+    return total;
 }
 
 std::vector<AABB> Shop::GetColliders() const {

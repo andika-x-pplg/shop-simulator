@@ -25,8 +25,12 @@ SaveData::SaveData()
       dailyRevenue(0), dailyExpenses(0), dailyCustomers(0),
       reputation(50), totalRatings(0), totalRatingPoints(0),
       rackBeverageStock(10), rackBreadStock(8), rackCannedFoodStock(12),
+      rackSoapStock(10), rackTeaStock(12), rackNoodleStock(15),
       storageBeverageStock(0), storageBreadStock(0), storageCannedFoodStock(0),
+      storageSoapStock(0), storageTeaStock(0), storageNoodleStock(0),
       sellPriceBeverage(5000), sellPriceBread(8000), sellPriceCannedFood(12000),
+      sellPriceSoap(6000), sellPriceTea(7000), sellPriceNoodle(4500),
+      sellPriceBiscuit(9000), sellPriceJuice(10000),
       shopSizeLevel(1), shelfCapacityLevel(1), storageCapacityLevel(1), customerCapacityLevel(1),
       tableOwned(false), chairOwned(false), displayShelfOwned(false), cabinetOwned(false), decorationPlantOwned(false),
       betterDisplayOwned(false), extraStorageRackOwned(false), betterCashierOwned(false)
@@ -85,14 +89,25 @@ bool SaveSystem::ValidateSaveData(SaveData& data, std::string& outWarning) {
     data.rackBeverageStock = std::max(0, data.rackBeverageStock);
     data.rackBreadStock = std::max(0, data.rackBreadStock);
     data.rackCannedFoodStock = std::max(0, data.rackCannedFoodStock);
+    data.rackSoapStock = std::max(0, data.rackSoapStock);
+    data.rackTeaStock = std::max(0, data.rackTeaStock);
+    data.rackNoodleStock = std::max(0, data.rackNoodleStock);
 
     data.storageBeverageStock = std::max(0, data.storageBeverageStock);
     data.storageBreadStock = std::max(0, data.storageBreadStock);
     data.storageCannedFoodStock = std::max(0, data.storageCannedFoodStock);
+    data.storageSoapStock = std::max(0, data.storageSoapStock);
+    data.storageTeaStock = std::max(0, data.storageTeaStock);
+    data.storageNoodleStock = std::max(0, data.storageNoodleStock);
 
     data.sellPriceBeverage = std::max(500, data.sellPriceBeverage);
     data.sellPriceBread = std::max(500, data.sellPriceBread);
     data.sellPriceCannedFood = std::max(500, data.sellPriceCannedFood);
+    data.sellPriceSoap = std::max(500, data.sellPriceSoap);
+    data.sellPriceTea = std::max(500, data.sellPriceTea);
+    data.sellPriceNoodle = std::max(500, data.sellPriceNoodle);
+    data.sellPriceBiscuit = std::max(500, data.sellPriceBiscuit);
+    data.sellPriceJuice = std::max(500, data.sellPriceJuice);
 
     data.shopSizeLevel = std::max(1, std::min(3, data.shopSizeLevel));
     data.shelfCapacityLevel = std::max(1, std::min(3, data.shelfCapacityLevel));
@@ -149,19 +164,33 @@ bool SaveSystem::SaveGame(const std::string& filepath,
     data.totalRatingPoints = reputation.GetTotalRatingPoints();
 
     const auto& racks = shop.GetRacks();
-    if (racks.size() >= 3) {
-        data.rackBeverageStock = racks[0].GetStock();
-        data.rackBreadStock = racks[1].GetStock();
-        data.rackCannedFoodStock = racks[2].GetStock();
-    }
+    if (racks.size() >= 1) data.rackBeverageStock = racks[0].GetStock();
+    if (racks.size() >= 2) data.rackBreadStock = racks[1].GetStock();
+    if (racks.size() >= 3) data.rackCannedFoodStock = racks[2].GetStock();
+    if (racks.size() >= 4) data.rackSoapStock = racks[3].GetStock();
+    if (racks.size() >= 5) data.rackTeaStock = racks[4].GetStock();
+    if (racks.size() >= 6) data.rackNoodleStock = racks[5].GetStock();
 
-    data.storageBeverageStock = shop.GetStorage().GetBeverageStock();
-    data.storageBreadStock = shop.GetStorage().GetBreadStock();
-    data.storageCannedFoodStock = shop.GetStorage().GetCannedFoodStock();
+    data.storageBeverageStock = shop.GetStorage().GetStock(ProductType::BEVERAGE);
+    data.storageBreadStock = shop.GetStorage().GetStock(ProductType::BREAD);
+    data.storageCannedFoodStock = shop.GetStorage().GetStock(ProductType::CANNED_FOOD);
+    data.storageSoapStock = shop.GetStorage().GetStock(ProductType::SOAP_BAR);
+    data.storageTeaStock = shop.GetStorage().GetStock(ProductType::TEA_BOTTLE);
+    data.storageNoodleStock = shop.GetStorage().GetStock(ProductType::INSTANT_NOODLE);
 
     data.sellPriceBeverage = priceMgr.GetSellPrice(ProductType::BEVERAGE);
     data.sellPriceBread = priceMgr.GetSellPrice(ProductType::BREAD);
     data.sellPriceCannedFood = priceMgr.GetSellPrice(ProductType::CANNED_FOOD);
+    data.sellPriceSoap = priceMgr.GetSellPrice(ProductType::SOAP_BAR);
+    data.sellPriceTea = priceMgr.GetSellPrice(ProductType::TEA_BOTTLE);
+    data.sellPriceNoodle = priceMgr.GetSellPrice(ProductType::INSTANT_NOODLE);
+    data.sellPriceBiscuit = priceMgr.GetSellPrice(ProductType::SNACK_BISCUIT);
+    data.sellPriceJuice = priceMgr.GetSellPrice(ProductType::TISSUE_PACK);
+
+    const auto& allStats = priceMgr.GetAllStats();
+    for (const auto& kv : allStats) {
+        data.productStats[static_cast<int>(kv.first)] = { kv.second.totalSold, kv.second.totalRevenue, kv.second.totalProfit };
+    }
 
     data.shopSizeLevel = shopUpgrade.GetLevel(UpgradeType::SHOP_SIZE);
     data.shelfCapacityLevel = shopUpgrade.GetLevel(UpgradeType::SHELF_CAPACITY);
@@ -215,14 +244,25 @@ bool SaveSystem::SaveGame(const std::string& filepath,
     file << "    \"rackBeverage\": " << data.rackBeverageStock << ",\n";
     file << "    \"rackBread\": " << data.rackBreadStock << ",\n";
     file << "    \"rackCannedFood\": " << data.rackCannedFoodStock << ",\n";
+    file << "    \"rackSoap\": " << data.rackSoapStock << ",\n";
+    file << "    \"rackTea\": " << data.rackTeaStock << ",\n";
+    file << "    \"rackNoodle\": " << data.rackNoodleStock << ",\n";
     file << "    \"storageBeverage\": " << data.storageBeverageStock << ",\n";
     file << "    \"storageBread\": " << data.storageBreadStock << ",\n";
-    file << "    \"storageCannedFood\": " << data.storageCannedFoodStock << "\n";
+    file << "    \"storageCannedFood\": " << data.storageCannedFoodStock << ",\n";
+    file << "    \"storageSoap\": " << data.storageSoapStock << ",\n";
+    file << "    \"storageTea\": " << data.storageTeaStock << ",\n";
+    file << "    \"storageNoodle\": " << data.storageNoodleStock << "\n";
     file << "  },\n";
     file << "  \"prices\": {\n";
     file << "    \"beverage\": " << data.sellPriceBeverage << ",\n";
     file << "    \"bread\": " << data.sellPriceBread << ",\n";
-    file << "    \"cannedFood\": " << data.sellPriceCannedFood << "\n";
+    file << "    \"cannedFood\": " << data.sellPriceCannedFood << ",\n";
+    file << "    \"soap\": " << data.sellPriceSoap << ",\n";
+    file << "    \"tea\": " << data.sellPriceTea << ",\n";
+    file << "    \"noodle\": " << data.sellPriceNoodle << ",\n";
+    file << "    \"biscuit\": " << data.sellPriceBiscuit << ",\n";
+    file << "    \"juice\": " << data.sellPriceJuice << "\n";
     file << "  },\n";
     file << "  \"upgrades\": {\n";
     file << "    \"shopSize\": " << data.shopSizeLevel << ",\n";
@@ -361,14 +401,25 @@ bool SaveSystem::LoadGame(const std::string& filepath,
     data.rackBeverageStock = ReadInt(content, "rackBeverage", 10);
     data.rackBreadStock = ReadInt(content, "rackBread", 8);
     data.rackCannedFoodStock = ReadInt(content, "rackCannedFood", 12);
+    data.rackSoapStock = ReadInt(content, "rackSoap", 10);
+    data.rackTeaStock = ReadInt(content, "rackTea", 12);
+    data.rackNoodleStock = ReadInt(content, "rackNoodle", 15);
 
     data.storageBeverageStock = ReadInt(content, "storageBeverage", 0);
     data.storageBreadStock = ReadInt(content, "storageBread", 0);
     data.storageCannedFoodStock = ReadInt(content, "storageCannedFood", 0);
+    data.storageSoapStock = ReadInt(content, "storageSoap", 0);
+    data.storageTeaStock = ReadInt(content, "storageTea", 0);
+    data.storageNoodleStock = ReadInt(content, "storageNoodle", 0);
 
     data.sellPriceBeverage = ReadInt(content, "beverage", 5000);
     data.sellPriceBread = ReadInt(content, "bread", 8000);
     data.sellPriceCannedFood = ReadInt(content, "cannedFood", 12000);
+    data.sellPriceSoap = ReadInt(content, "soap", 6000);
+    data.sellPriceTea = ReadInt(content, "tea", 7000);
+    data.sellPriceNoodle = ReadInt(content, "noodle", 4500);
+    data.sellPriceBiscuit = ReadInt(content, "biscuit", 9000);
+    data.sellPriceJuice = ReadInt(content, "juice", 10000);
 
     data.shopSizeLevel = ReadInt(content, "shopSize", 1);
     data.shelfCapacityLevel = ReadInt(content, "shelfCap", 1);
@@ -423,21 +474,30 @@ bool SaveSystem::LoadGame(const std::string& filepath,
 
     // Stocks
     auto& racks = shop.GetRacks();
-    if (racks.size() >= 3) {
-        racks[0].SetStock(data.rackBeverageStock);
-        racks[1].SetStock(data.rackBreadStock);
-        racks[2].SetStock(data.rackCannedFoodStock);
-    }
+    if (racks.size() >= 1) racks[0].SetStock(data.rackBeverageStock);
+    if (racks.size() >= 2) racks[1].SetStock(data.rackBreadStock);
+    if (racks.size() >= 3) racks[2].SetStock(data.rackCannedFoodStock);
+    if (racks.size() >= 4) racks[3].SetStock(data.rackSoapStock);
+    if (racks.size() >= 5) racks[4].SetStock(data.rackTeaStock);
+    if (racks.size() >= 6) racks[5].SetStock(data.rackNoodleStock);
 
     shop.GetStorage().SetStock(ProductType::BEVERAGE, data.storageBeverageStock);
     shop.GetStorage().SetStock(ProductType::BREAD, data.storageBreadStock);
     shop.GetStorage().SetStock(ProductType::CANNED_FOOD, data.storageCannedFoodStock);
+    shop.GetStorage().SetStock(ProductType::SOAP_BAR, data.storageSoapStock);
+    shop.GetStorage().SetStock(ProductType::TEA_BOTTLE, data.storageTeaStock);
+    shop.GetStorage().SetStock(ProductType::INSTANT_NOODLE, data.storageNoodleStock);
 
     // Prices
     std::string fb;
     priceMgr.SetSellPrice(ProductType::BEVERAGE, data.sellPriceBeverage, fb);
     priceMgr.SetSellPrice(ProductType::BREAD, data.sellPriceBread, fb);
     priceMgr.SetSellPrice(ProductType::CANNED_FOOD, data.sellPriceCannedFood, fb);
+    priceMgr.SetSellPrice(ProductType::SOAP_BAR, data.sellPriceSoap, fb);
+    priceMgr.SetSellPrice(ProductType::TEA_BOTTLE, data.sellPriceTea, fb);
+    priceMgr.SetSellPrice(ProductType::INSTANT_NOODLE, data.sellPriceNoodle, fb);
+    priceMgr.SetSellPrice(ProductType::SNACK_BISCUIT, data.sellPriceBiscuit, fb);
+    priceMgr.SetSellPrice(ProductType::TISSUE_PACK, data.sellPriceJuice, fb);
 
     outMessage = "Game berhasil dimuat!";
     return true;

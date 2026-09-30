@@ -192,6 +192,7 @@ int main() {
                 Color nextDayCol;
                 gameTime.StartNextDay(nextDayNotice, nextDayCol);
                 dailyStats.ResetDaily();
+                priceMgr.ResetDailyStats();
 
                 // Trigger Autosave on new day start
                 std::string autoSaveMsg;
@@ -483,33 +484,84 @@ int main() {
         // Price Management Modal Inputs (P)
         // -------------------------------------------------------------
         else if (priceMgr.IsMenuOpen()) {
-            if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
-                priceMgr.PreviousProduct();
-                audioMgr.PlayEvent(SoundEvent::CLICK);
-            }
-            if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
-                priceMgr.NextProduct();
-                audioMgr.PlayEvent(SoundEvent::CLICK);
-            }
-            if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) {
-                ProductType curType = priceMgr.GetSelectedProductType();
-                priceMgr.AdjustSellPrice(curType, 500);
-                std::string fb;
-                priceMgr.SetSellPrice(curType, priceMgr.GetSellPrice(curType), fb);
-                topNotice = fb;
-                topNoticeColor = { 40, 120, 200, 235 };
-                topNoticeTimer = 3.0f;
-                audioMgr.PlayEvent(SoundEvent::CLICK);
-            }
-            if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) {
-                ProductType curType = priceMgr.GetSelectedProductType();
-                priceMgr.AdjustSellPrice(curType, -500);
-                std::string fb;
-                priceMgr.SetSellPrice(curType, priceMgr.GetSellPrice(curType), fb);
-                topNotice = fb;
-                topNoticeColor = { 40, 120, 200, 235 };
-                topNoticeTimer = 3.0f;
-                audioMgr.PlayEvent(SoundEvent::CLICK);
+            if (priceMgr.IsEditingPrice()) {
+                // Number keys 0-9 (Main keyboard & Numpad)
+                for (int key = KEY_ZERO; key <= KEY_NINE; ++key) {
+                    if (IsKeyPressed(key)) {
+                        priceMgr.AppendCharToInput('0' + (key - KEY_ZERO));
+                        audioMgr.PlayEvent(SoundEvent::CLICK);
+                    }
+                }
+                for (int key = KEY_KP_0; key <= KEY_KP_9; ++key) {
+                    if (IsKeyPressed(key)) {
+                        priceMgr.AppendCharToInput('0' + (key - KEY_KP_0));
+                        audioMgr.PlayEvent(SoundEvent::CLICK);
+                    }
+                }
+
+                // Backspace
+                if (IsKeyPressed(KEY_BACKSPACE)) {
+                    priceMgr.BackspaceInput();
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+
+                // Confirm Input
+                if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
+                    std::string fb;
+                    if (priceMgr.ConfirmEditingPrice(fb)) {
+                        topNotice = fb;
+                        topNoticeColor = { 46, 204, 113, 235 };
+                        topNoticeTimer = 3.5f;
+                        audioMgr.PlayEvent(SoundEvent::PURCHASE);
+                    } else {
+                        player.SetFeedbackMessage(fb, 2.5f);
+                        audioMgr.PlayEvent(SoundEvent::CLICK);
+                    }
+                }
+
+                // Cancel direct typing
+                if (IsKeyPressed(KEY_ESCAPE)) {
+                    priceMgr.CancelEditingPrice();
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+            } else {
+                // Navigation mode
+                if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
+                    priceMgr.PreviousProduct();
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+                if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
+                    priceMgr.NextProduct();
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+
+                // Quick Increment / Decrement
+                if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) {
+                    ProductType curType = priceMgr.GetSelectedProductType();
+                    priceMgr.AdjustSellPrice(curType, 500);
+                    std::string fb;
+                    priceMgr.SetSellPrice(curType, priceMgr.GetSellPrice(curType), fb);
+                    topNotice = fb;
+                    topNoticeColor = { 40, 120, 200, 235 };
+                    topNoticeTimer = 3.0f;
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+                if (IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_A)) {
+                    ProductType curType = priceMgr.GetSelectedProductType();
+                    priceMgr.AdjustSellPrice(curType, -500);
+                    std::string fb;
+                    priceMgr.SetSellPrice(curType, priceMgr.GetSellPrice(curType), fb);
+                    topNotice = fb;
+                    topNoticeColor = { 40, 120, 200, 235 };
+                    topNoticeTimer = 3.0f;
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+
+                // Enter Direct Price Input Mode
+                if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_E)) {
+                    priceMgr.StartEditingPrice();
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
             }
         }
         // -------------------------------------------------------------
@@ -748,6 +800,12 @@ int main() {
                 dailyStats.RecordRevenue(paidAmount);
                 dailyStats.IncrementCustomerServed();
 
+                // Track individual product sales statistics in PriceManager (Tahap 15)
+                for (auto pType : cust.GetCarriedItems()) {
+                    int unitPrice = priceMgr.GetSellPrice(pType);
+                    priceMgr.RecordSale(pType, 1, unitPrice);
+                }
+
                 topNotice = "+Rp" + std::to_string(paidAmount) + " Pendapatan (" + cust.GetName() + ": " + paidProductSummary + ")";
                 topNoticeColor = { 20, 130, 60, 235 };
                 topNoticeTimer = 3.5f;
@@ -865,10 +923,8 @@ int main() {
             DrawText(repHudText.c_str(), 25, 349, 12, { 255, 215, 0, 255 });
 
             // Storage Stock Summary
-            std::string storageInfo = "Storage: Minuman " + std::to_string(shop.GetStorage().GetBeverageStock()) +
-                                      " | Roti " + std::to_string(shop.GetStorage().GetBreadStock()) +
-                                      " | Kaleng " + std::to_string(shop.GetStorage().GetCannedFoodStock()) +
-                                      " (Maks: " + std::to_string(shop.GetStorage().GetMaxCapacity()) + ")";
+            std::string storageInfo = "Storage: Total " + std::to_string(shop.GetStorage().GetTotalStock()) +
+                                      " / " + std::to_string(shop.GetStorage().GetMaxCapacity()) + " unit (TAB: Pengadaan)";
             DrawText(storageInfo.c_str(), 25, 367, 12, { 255, 200, 120, 255 });
 
             // Customer / Cashier Status Debug
@@ -1032,127 +1088,183 @@ int main() {
             if (supplier.IsMenuOpen()) {
                 DrawRectangle(0, 0, screenWidth, screenHeight, { 0, 0, 0, 160 });
 
-                int modalW = 620;
-                int modalH = 470;
+                int modalW = 680;
+                int modalH = 500;
                 int modalX = (screenWidth - modalW) / 2;
                 int modalY = (screenHeight - modalH) / 2;
 
                 DrawRectangle(modalX, modalY, modalW, modalH, { 25, 30, 38, 250 });
                 DrawRectangleLines(modalX, modalY, modalW, modalH, { 52, 152, 219, 255 });
 
-                DrawText("MENU PENGADAAN BARANG (SUPPLIER)", modalX + 30, modalY + 22, 20, { 255, 215, 0, 255 });
-                DrawText("Pilih produk, tentukan jumlah, lalu tekan ENTER untuk order", modalX + 30, modalY + 48, 13, { 180, 190, 200, 255 });
+                DrawText("MENU PENGADAAN BARANG (SUPPLIER)", modalX + 30, modalY + 18, 20, { 255, 215, 0, 255 });
+                DrawText("Katalog Multi-Kategori: Minuman, Makanan, Camilan & Kebutuhan Rumah", modalX + 30, modalY + 42, 12, { 180, 190, 200, 255 });
 
                 const auto& prods = priceMgr.GetManagedProducts();
-                int listY = modalY + 78;
+                int curSel = supplier.GetSelectedProductIndex();
+                int visibleCount = 3;
+                int startIdx = std::max(0, std::min((int)prods.size() - visibleCount, curSel - 1));
 
-                for (size_t i = 0; i < prods.size(); ++i) {
-                    ProductInfo info = GetProductInfo(prods[i]);
-                    bool isSelected = (supplier.GetSelectedProductIndex() == (int)i);
+                int listY = modalY + 68;
+                for (int i = startIdx; i < startIdx + visibleCount && i < (int)prods.size(); ++i) {
+                    ProductType pType = prods[i];
+                    ProductInfo info = GetProductInfo(pType);
+                    bool isSelected = (curSel == i);
 
                     Color itemBg = isSelected ? Color{ 40, 70, 110, 240 } : Color{ 35, 40, 48, 200 };
                     Color itemBorder = isSelected ? Color{ 0, 200, 255, 255 } : Color{ 60, 70, 80, 255 };
 
-                    DrawRectangle(modalX + 30, listY, modalW - 60, 62, itemBg);
-                    DrawRectangleLines(modalX + 30, listY, modalW - 60, 62, itemBorder);
+                    DrawRectangle(modalX + 30, listY, modalW - 60, 72, itemBg);
+                    DrawRectangleLines(modalX + 30, listY, modalW - 60, 72, itemBorder);
 
-                    DrawRectangle(modalX + 45, listY + 16, 30, 30, info.primaryColor);
-                    DrawRectangleLines(modalX + 45, listY + 16, 30, 30, RAYWHITE);
+                    DrawRectangle(modalX + 45, listY + 14, 44, 44, info.primaryColor);
+                    DrawRectangleLines(modalX + 45, listY + 14, 44, 44, RAYWHITE);
+                    DrawText(info.sku.c_str(), modalX + 47, listY + 30, 9, RAYWHITE);
 
-                    std::string pTitle = info.name + (isSelected ? "  <-- TERPILIH" : "");
-                    DrawText(pTitle.c_str(), modalX + 90, listY + 12, 16, isSelected ? Color{ 255, 230, 100, 255 } : RAYWHITE);
+                    std::string pTitle = info.name + " (" + GetCategoryName(info.category) + ")" + (isSelected ? "  <-- DIPILIH" : "");
+                    DrawText(pTitle.c_str(), modalX + 100, listY + 12, 15, isSelected ? Color{ 255, 230, 100, 255 } : RAYWHITE);
 
-                    std::string priceLine = "Harga Beli Supplier: Rp" + std::to_string(info.buyPrice) + 
-                                            "  |  Harga Jual Toko: Rp" + std::to_string(priceMgr.GetSellPrice(prods[i])) +
-                                            "  |  Storage: " + std::to_string(shop.GetStorage().GetStock(prods[i]));
-                    DrawText(priceLine.c_str(), modalX + 90, listY + 36, 13, { 180, 200, 220, 255 });
+                    std::string priceLine = "Beli: Rp" + std::to_string(info.buyPrice) + 
+                                            "  |  Jual: Rp" + std::to_string(priceMgr.GetSellPrice(pType)) +
+                                            "  |  Storage: " + std::to_string(shop.GetStorage().GetStock(pType)) +
+                                            "  |  SKU: " + info.sku;
+                    DrawText(priceLine.c_str(), modalX + 100, listY + 34, 12, { 180, 200, 220, 255 });
 
-                    listY += 70;
+                    std::string popText = "Popularitas: " + priceMgr.GetPopularityLevel(pType) + " (Terjual: " + std::to_string(priceMgr.GetProductStats(pType).totalSold) + ")";
+                    DrawText(popText.c_str(), modalX + 100, listY + 52, 11, { 255, 215, 0, 255 });
+
+                    listY += 78;
                 }
+
+                // Scroll Indicator
+                std::string pageStr = "Item " + std::to_string(curSel + 1) + " / " + std::to_string(prods.size()) + " (Gunakan Panah Atas/Bawah untuk Scroll)";
+                DrawText(pageStr.c_str(), modalX + 35, modalY + 308, 11, { 150, 170, 190, 255 });
 
                 ProductInfo selectedInfo = GetProductInfo(supplier.GetSelectedProductType());
                 int curQty = supplier.GetOrderQuantity();
                 int curTotal = selectedInfo.buyPrice * curQty;
 
-                int qtyBoxY = modalY + 305;
-                DrawRectangle(modalX + 30, qtyBoxY, modalW - 60, 70, { 20, 25, 32, 230 });
-                DrawRectangleLines(modalX + 30, qtyBoxY, modalW - 60, 70, { 100, 110, 120, 255 });
+                int qtyBoxY = modalY + 328;
+                DrawRectangle(modalX + 30, qtyBoxY, modalW - 60, 96, { 20, 25, 32, 230 });
+                DrawRectangleLines(modalX + 30, qtyBoxY, modalW - 60, 96, { 100, 110, 120, 255 });
 
-                DrawText("Jumlah Pesanan:", modalX + 50, qtyBoxY + 14, 15, RAYWHITE);
-                DrawText(("[ < A / D > ]  " + std::to_string(curQty) + " Unit").c_str(), modalX + 185, qtyBoxY + 12, 18, { 255, 215, 0, 255 });
+                std::string selOrdSummary = "Order: [" + selectedInfo.sku + "] " + selectedInfo.name + " (" + GetCategoryName(selectedInfo.category) + ")";
+                DrawText(selOrdSummary.c_str(), modalX + 45, qtyBoxY + 10, 13, { 100, 220, 255, 255 });
 
-                DrawText("Total Biaya:", modalX + 50, qtyBoxY + 40, 15, RAYWHITE);
-                DrawText(("Rp" + std::to_string(curTotal)).c_str(), modalX + 185, qtyBoxY + 40, 16, { 255, 100, 100, 255 });
+                DrawText("Jumlah:", modalX + 45, qtyBoxY + 36, 14, RAYWHITE);
+                DrawText(("[ < A / D > ]  " + std::to_string(curQty) + " Unit").c_str(), modalX + 115, qtyBoxY + 34, 16, { 255, 215, 0, 255 });
 
-                std::string treasuryHint = "Saldo Toko: Rp" + std::to_string(finance.GetCurrentBalance());
-                DrawText(treasuryHint.c_str(), modalX + 370, qtyBoxY + 40, 14, { 50, 255, 120, 255 });
+                DrawText("Total Biaya:", modalX + 330, qtyBoxY + 36, 14, RAYWHITE);
+                DrawText(("Rp" + std::to_string(curTotal)).c_str(), modalX + 430, qtyBoxY + 34, 16, { 255, 100, 100, 255 });
+
+                std::string treasuryHint = "Saldo Toko: Rp" + std::to_string(finance.GetCurrentBalance()) + 
+                                           "  |  Gudang: " + std::to_string(shop.GetStorage().GetTotalStock()) + "/" + std::to_string(shop.GetStorage().GetMaxCapacity());
+                DrawText(treasuryHint.c_str(), modalX + 45, qtyBoxY + 68, 13, { 50, 255, 120, 255 });
 
                 DrawText("[W / S / Panah] Pilih Produk    [A / D] Ubah Jumlah (+-5)    [ENTER] Beli    [TAB / ESC] Tutup",
-                         modalX + 35, modalY + 415, 13, { 255, 220, 120, 255 });
+                         modalX + 35, modalY + 468, 12, { 255, 220, 120, 255 });
             }
 
             // ==========================================
-            // PRICE MANAGEMENT MODAL MENU (P)
+            // PRICE & PRODUCT MANAGEMENT MODAL MENU (P)
             // ==========================================
             if (priceMgr.IsMenuOpen()) {
                 DrawRectangle(0, 0, screenWidth, screenHeight, { 0, 0, 0, 160 });
 
-                int modalW = 640;
-                int modalH = 470;
+                int modalW = 720;
+                int modalH = 510;
                 int modalX = (screenWidth - modalW) / 2;
                 int modalY = (screenHeight - modalH) / 2;
 
                 DrawRectangle(modalX, modalY, modalW, modalH, { 25, 30, 42, 250 });
                 DrawRectangleLines(modalX, modalY, modalW, modalH, { 41, 128, 185, 255 });
 
-                DrawText("MANAJEMEN HARGA JUAL TOKO", modalX + 30, modalY + 22, 20, { 100, 220, 255, 255 });
-                DrawText("Atur harga jual ke customer. Margin dihitung otomatis (Jual - Beli)", modalX + 30, modalY + 48, 13, { 180, 195, 210, 255 });
+                DrawText("MANAJEMEN PRODUK & HARGA JUAL TOKO", modalX + 30, modalY + 16, 20, { 100, 220, 255, 255 });
+                DrawText("Atur harga jual & analisis performa per produk (Best Seller, Laba Bersih & Popularitas)", modalX + 30, modalY + 40, 12, { 180, 195, 210, 255 });
 
                 const auto& prods = priceMgr.GetManagedProducts();
-                int listY = modalY + 80;
+                int curSel = priceMgr.GetSelectedProductIndex();
+                int visibleCount = 3;
+                int startIdx = std::max(0, std::min((int)prods.size() - visibleCount, curSel - 1));
 
-                for (size_t i = 0; i < prods.size(); ++i) {
+                int listY = modalY + 62;
+                for (int i = startIdx; i < startIdx + visibleCount && i < (int)prods.size(); ++i) {
                     ProductType pType = prods[i];
                     ProductInfo info = GetProductInfo(pType);
                     int sellPrice = priceMgr.GetSellPrice(pType);
                     int buyPrice = priceMgr.GetBuyPrice(pType);
                     int margin = priceMgr.GetUnitMargin(pType);
+                    const auto& stats = priceMgr.GetProductStats(pType);
 
-                    bool isSelected = (priceMgr.GetSelectedProductIndex() == (int)i);
+                    bool isSelected = (curSel == i);
 
                     Color itemBg = isSelected ? Color{ 35, 65, 95, 240 } : Color{ 30, 36, 45, 200 };
                     Color itemBorder = isSelected ? Color{ 0, 220, 255, 255 } : Color{ 55, 65, 75, 255 };
 
-                    DrawRectangle(modalX + 30, listY, modalW - 60, 85, itemBg);
-                    DrawRectangleLines(modalX + 30, listY, modalW - 60, 85, itemBorder);
+                    DrawRectangle(modalX + 30, listY, modalW - 60, 92, itemBg);
+                    DrawRectangleLines(modalX + 30, listY, modalW - 60, 92, itemBorder);
 
-                    DrawRectangle(modalX + 45, listY + 25, 35, 35, info.primaryColor);
-                    DrawRectangleLines(modalX + 45, listY + 25, 35, 35, RAYWHITE);
+                    DrawRectangle(modalX + 45, listY + 15, 48, 48, info.primaryColor);
+                    DrawRectangleLines(modalX + 45, listY + 15, 48, 48, RAYWHITE);
+                    DrawText(info.sku.c_str(), modalX + 47, listY + 32, 9, RAYWHITE);
 
-                    std::string pTitle = info.name + (isSelected ? "  [Sedang Dipilih]" : "");
-                    DrawText(pTitle.c_str(), modalX + 95, listY + 12, 16, isSelected ? Color{ 255, 230, 100, 255 } : RAYWHITE);
+                    std::string pTitle = "[" + info.sku + "] " + info.name + " (" + GetCategoryName(info.category) + ")" + (isSelected ? "  [DIPILIH]" : "");
+                    DrawText(pTitle.c_str(), modalX + 105, listY + 10, 15, isSelected ? Color{ 255, 230, 100, 255 } : RAYWHITE);
 
                     std::string modalLine = "Modal: Rp" + std::to_string(buyPrice) +
-                                            "    |    Jual: Rp" + std::to_string(sellPrice);
-                    DrawText(modalLine.c_str(), modalX + 95, listY + 36, 14, { 220, 230, 240, 255 });
-
+                                            "  |  Jual: Rp" + std::to_string(sellPrice) +
+                                            "  |  Margin: " + (margin >= 0 ? ("+Rp" + std::to_string(margin)) : ("-Rp" + std::to_string(-margin)));
                     Color marginColor = (margin >= 0) ? Color{ 50, 255, 120, 255 } : Color{ 255, 80, 80, 255 };
-                    std::string marginText = "Profit/unit: " + (margin >= 0 ? ("+Rp" + std::to_string(margin)) : ("-Rp" + std::to_string(-margin)));
-                    DrawText(marginText.c_str(), modalX + 95, listY + 58, 14, marginColor);
+                    DrawText(modalLine.c_str(), modalX + 105, listY + 30, 13, marginColor);
 
-                    if (sellPrice < buyPrice) {
-                        DrawText("(Peringatan: Jual di bawah modal!)", modalX + 280, listY + 58, 12, { 255, 100, 100, 255 });
-                    }
+                    std::string statLine = "Terjual: " + std::to_string(stats.totalSold) + " unit | Omset: Rp" + std::to_string(stats.totalRevenue) +
+                                           " | Profit: Rp" + std::to_string(stats.totalProfit) + " | Pop: " + priceMgr.GetPopularityLevel(pType);
+                    DrawText(statLine.c_str(), modalX + 105, listY + 50, 12, { 255, 215, 0, 255 });
+
+                    std::string stockLine = "Stok Rak: " + std::to_string(shop.GetProductStockOnShelves(pType)) +
+                                            " | Stok Gudang: " + std::to_string(shop.GetStorage().GetStock(pType));
+                    DrawText(stockLine.c_str(), modalX + 105, listY + 68, 11, { 180, 210, 235, 255 });
 
                     if (isSelected) {
-                        DrawText("[ < A / D >  +-Rp500 ]", modalX + modalW - 235, listY + 36, 13, { 255, 215, 0, 255 });
+                        if (priceMgr.IsEditingPrice()) {
+                            DrawRectangle(modalX + modalW - 220, listY + 10, 185, 34, { 30, 45, 65, 255 });
+                            DrawRectangleLines(modalX + modalW - 220, listY + 10, 185, 34, { 0, 255, 200, 255 });
+                            std::string inputShow = "Rp" + priceMgr.GetInputBuffer() + (((int)(GetTime() * 2.5f) % 2 == 0) ? "_" : " ");
+                            DrawText(inputShow.c_str(), modalX + modalW - 210, listY + 18, 14, { 50, 255, 150, 255 });
+                            DrawText("[ENTER] Simpan [ESC] Batal", modalX + modalW - 220, listY + 48, 10, { 200, 230, 255, 255 });
+                        } else {
+                            DrawText("[ENTER / E: Ubah Harga]", modalX + modalW - 200, listY + 10, 12, { 50, 255, 150, 255 });
+                            DrawText("[ < A / D > +-Rp500 ]", modalX + modalW - 200, listY + 28, 12, { 255, 215, 0, 255 });
+                        }
                     }
 
-                    listY += 95;
+                    listY += 98;
                 }
 
-                DrawText("[W / S / Panah] Pilih Produk    [A / D] Ubah Harga (+-Rp500)    [P / ESC] Tutup",
-                         modalX + 45, modalY + 415, 13, { 255, 220, 120, 255 });
+                // Summary of Best Seller & Slow Seller at bottom
+                int statBoxY = modalY + 360;
+                DrawRectangle(modalX + 30, statBoxY, modalW - 60, 95, { 18, 22, 28, 240 });
+                DrawRectangleLines(modalX + 30, statBoxY, modalW - 60, 95, { 60, 75, 90, 255 });
+
+                ProductType bestType = priceMgr.GetBestSeller();
+                ProductType slowType = priceMgr.GetSlowSeller();
+
+                std::string bestName = (bestType != ProductType::NONE) ? 
+                    (GetProductInfo(bestType).name + " (" + std::to_string(priceMgr.GetProductStats(bestType).totalSold) + " unit)") : "Belum ada";
+                std::string slowName = (slowType != ProductType::NONE) ? 
+                    (GetProductInfo(slowType).name + " (" + std::to_string(priceMgr.GetProductStats(slowType).totalSold) + " unit)") : "Belum ada";
+
+                DrawText("RINGKASAN PERFORMA PENJUALAN:", modalX + 45, statBoxY + 10, 13, { 100, 220, 255, 255 });
+                DrawText(("BEST SELLER : " + bestName).c_str(), modalX + 45, statBoxY + 32, 13, { 50, 255, 120, 255 });
+                DrawText(("SLOW SELLER : " + slowName).c_str(), modalX + 45, statBoxY + 52, 13, { 255, 160, 100, 255 });
+                DrawText(("Item terpilih: " + std::to_string(curSel + 1) + " / " + std::to_string(prods.size())).c_str(), modalX + 45, statBoxY + 72, 11, { 180, 190, 200, 255 });
+
+                if (priceMgr.IsEditingPrice()) {
+                    DrawText("MODE KETIK HARGA: Ketik Angka [0-9] | [BACKSPACE] Hapus | [ENTER] Simpan | [ESC] Batal",
+                             modalX + 45, modalY + 478, 12, { 50, 255, 150, 255 });
+                } else {
+                    DrawText("[W / S] Pilih Produk    [ENTER / E] Ketik Harga    [A / D] +-Rp500    [P / ESC] Tutup",
+                             modalX + 45, modalY + 478, 12, { 255, 220, 120, 255 });
+                }
             }
 
             // ==========================================

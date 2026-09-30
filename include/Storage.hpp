@@ -36,7 +36,12 @@ public:
     int GetBeverageStock() const { return GetStock(ProductType::BEVERAGE); }
     int GetBreadStock() const { return GetStock(ProductType::BREAD); }
     int GetCannedFoodStock() const { return GetStock(ProductType::CANNED_FOOD); }
-    int GetTotalStock() const { return GetBeverageStock() + GetBreadStock() + GetCannedFoodStock(); }
+    int GetTotalStock() const {
+        int sum = 0;
+        for (const auto& pair : storageStocks) sum += pair.second;
+        return sum;
+    }
+    const std::map<ProductType, int>& GetAllStocks() const { return storageStocks; }
     int GetMaxCapacity() const { return maxStorageCapacity; }
     void SetMaxCapacity(int newMax) { if (newMax > 0) maxStorageCapacity = newMax; }
     bool IsFull(ProductType type) const { return GetStock(type) >= maxStorageCapacity; }

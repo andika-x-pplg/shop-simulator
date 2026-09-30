@@ -74,29 +74,26 @@ bool Rack::IsPlayerLookingAt(Vector3 playerEyePos, Vector3 playerLookDir, float 
 void Rack::DrawProductItem(Vector3 itemPos, ProductType type) {
     ProductInfo info = GetProductInfo(type);
     
-    if (type == ProductType::BEVERAGE) {
-        // Beverage Can / Bottle: Blue body + silver top
-        DrawCube(itemPos, info.modelDimensions.x, info.modelDimensions.y, info.modelDimensions.z, info.primaryColor);
-        DrawCubeWires(itemPos, info.modelDimensions.x, info.modelDimensions.y, info.modelDimensions.z, { 20, 80, 160, 255 });
-        
-        Vector3 capPos = { itemPos.x, itemPos.y + info.modelDimensions.y / 2.0f + 0.04f, itemPos.z };
-        DrawCube(capPos, info.modelDimensions.x * 0.7f, 0.08f, info.modelDimensions.z * 0.7f, info.secondaryColor);
-    }
-    else if (type == ProductType::BREAD) {
-        // Bread loaf: Golden crust body + lighter bread slit on top
-        DrawCube(itemPos, info.modelDimensions.x, info.modelDimensions.y, info.modelDimensions.z, info.primaryColor);
-        DrawCubeWires(itemPos, info.modelDimensions.x, info.modelDimensions.y, info.modelDimensions.z, { 140, 90, 40, 255 });
+    // Draw base packaging box/can/packet
+    DrawCube(itemPos, info.modelDimensions.x, info.modelDimensions.y, info.modelDimensions.z, info.primaryColor);
+    DrawCubeWires(itemPos, info.modelDimensions.x, info.modelDimensions.y, info.modelDimensions.z, { 40, 40, 45, 255 });
 
+    // Draw secondary detail (cap, lid, slit, or label)
+    if (type == ProductType::BEVERAGE || type == ProductType::TEA_BOTTLE) {
+        Vector3 capPos = { itemPos.x, itemPos.y + info.modelDimensions.y / 2.0f + 0.03f, itemPos.z };
+        DrawCube(capPos, info.modelDimensions.x * 0.65f, 0.06f, info.modelDimensions.z * 0.65f, info.secondaryColor);
+    }
+    else if (type == ProductType::BREAD || type == ProductType::SNACK_BISCUIT) {
         Vector3 topSlit = { itemPos.x, itemPos.y + info.modelDimensions.y / 2.0f + 0.02f, itemPos.z };
-        DrawCube(topSlit, info.modelDimensions.x * 0.8f, 0.04f, info.modelDimensions.z * 0.4f, info.secondaryColor);
+        DrawCube(topSlit, info.modelDimensions.x * 0.8f, 0.03f, info.modelDimensions.z * 0.45f, info.secondaryColor);
     }
     else if (type == ProductType::CANNED_FOOD) {
-        // Canned food: Red can + silver rim top & bottom
-        DrawCube(itemPos, info.modelDimensions.x, info.modelDimensions.y, info.modelDimensions.z, info.primaryColor);
-        DrawCubeWires(itemPos, info.modelDimensions.x, info.modelDimensions.y, info.modelDimensions.z, { 150, 30, 30, 255 });
-
         Vector3 rimTop = { itemPos.x, itemPos.y + info.modelDimensions.y / 2.0f + 0.02f, itemPos.z };
-        DrawCube(rimTop, info.modelDimensions.x * 0.9f, 0.04f, info.modelDimensions.z * 0.9f, info.secondaryColor);
+        DrawCube(rimTop, info.modelDimensions.x * 0.88f, 0.03f, info.modelDimensions.z * 0.88f, info.secondaryColor);
+    }
+    else if (type == ProductType::INSTANT_NOODLE || type == ProductType::SOAP_BAR || type == ProductType::TISSUE_PACK) {
+        Vector3 labelStrip = { itemPos.x, itemPos.y, itemPos.z + info.modelDimensions.z / 2.0f + 0.01f };
+        DrawCube(labelStrip, info.modelDimensions.x * 0.7f, info.modelDimensions.y * 0.5f, 0.02f, info.secondaryColor);
     }
 }
 
@@ -150,11 +147,13 @@ void Rack::RenderShelves() {
         DrawCube(midPos, size.x + 0.06f, 0.08f, size.z + 0.06f, trimColor);
     }
 
-    // Label banner on top edge indicating product category
+    // Label banner on top edge indicating product category / name
     Vector3 labelPos = { position.x, position.y + size.y / 2.0f + 0.35f, position.z };
-    Color bannerColor = (productType == ProductType::BEVERAGE) ? Color{ 0, 102, 204, 255 } :
-                        (productType == ProductType::BREAD) ? Color{ 180, 110, 40, 255 } :
-                        (productType == ProductType::CANNED_FOOD) ? Color{ 180, 40, 40, 255 } : Color{ 80, 85, 90, 255 };
+    ProductInfo pInfo = GetProductInfo(productType);
+    Color bannerColor = (pInfo.category == ProductCategory::DRINK) ? Color{ 0, 102, 204, 255 } :
+                        (pInfo.category == ProductCategory::FOOD) ? Color{ 180, 110, 40, 255 } :
+                        (pInfo.category == ProductCategory::SNACK) ? Color{ 200, 140, 20, 255 } :
+                        (pInfo.category == ProductCategory::HOUSEHOLD) ? Color{ 40, 160, 120, 255 } : Color{ 80, 85, 90, 255 };
     
     DrawCube(labelPos, size.x * 0.85f, 0.35f, 0.15f, bannerColor);
     DrawCubeWires(labelPos, size.x * 0.85f, 0.35f, 0.15f, RAYWHITE);

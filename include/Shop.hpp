@@ -48,6 +48,7 @@ public:
     // Customer navigation: Find a rack that has stock > 0
     int FindAvailableRackIndex(int preferredStartIndex = 0) const;
     int FindRackWithProduct(ProductType type) const;
+    int GetProductStockOnShelves(ProductType type) const;
 
     // Shop Upgrade: Size expansion
     int GetShopSizeLevel() const { return shopSizeLevel; }

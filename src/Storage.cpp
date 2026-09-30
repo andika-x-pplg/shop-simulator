@@ -9,9 +9,9 @@ Storage::Storage()
 
 void Storage::Init() {
     maxStorageCapacity = 50;
-    storageStocks[ProductType::BEVERAGE] = 0;
-    storageStocks[ProductType::BREAD] = 0;
-    storageStocks[ProductType::CANNED_FOOD] = 0;
+    for (auto type : GetAllProductTypes()) {
+        storageStocks[type] = 0;
+    }
 
     BuildStorageLayout();
     BuildColliders();
@@ -20,15 +20,24 @@ void Storage::Init() {
 void Storage::BuildStorageLayout() {
     storagePallets.clear();
 
-    // Storage Zone: located in the North-East / Back section (X = 3.5m to 7.0m, Z = -8.5m to -10.5m)
-    // Pallet 1: Minuman Storage (X = 6.0m, Z = -9.5m)
-    storagePallets.push_back({ { 6.0f, 0.4f, -9.5f }, { 1.8f, 0.8f, 1.8f }, ProductType::BEVERAGE, { 185, 122, 87, 255 } });
+    // Storage Zone: located in the North-East / Back section (X = -2.0m to 7.0m, Z = -9.5m)
+    // Pallet 1: Minuman / Air Mineral (DRK-001) (X = 6.2m, Z = -9.5m)
+    storagePallets.push_back({ { 6.2f, 0.4f, -9.5f }, { 1.5f, 0.8f, 1.5f }, ProductType::BEVERAGE, { 185, 122, 87, 255 } });
 
-    // Pallet 2: Roti Storage (X = 3.2f, Z = -9.5f)
-    storagePallets.push_back({ { 3.2f, 0.4f, -9.5f }, { 1.8f, 0.8f, 1.8f }, ProductType::BREAD, { 205, 133, 63, 255 } });
+    // Pallet 2: Roti Tawar (FOD-001) (X = 4.4f, Z = -9.5f)
+    storagePallets.push_back({ { 4.4f, 0.4f, -9.5f }, { 1.5f, 0.8f, 1.5f }, ProductType::BREAD, { 205, 133, 63, 255 } });
 
-    // Pallet 3: Makanan Kaleng Storage (X = 0.4f, Z = -9.5f)
-    storagePallets.push_back({ { 0.4f, 0.4f, -9.5f }, { 1.8f, 0.8f, 1.8f }, ProductType::CANNED_FOOD, { 160, 82, 45, 255 } });
+    // Pallet 3: Makanan Kaleng (FOD-003) (X = 2.6f, Z = -9.5f)
+    storagePallets.push_back({ { 2.6f, 0.4f, -9.5f }, { 1.5f, 0.8f, 1.5f }, ProductType::CANNED_FOOD, { 160, 82, 45, 255 } });
+
+    // Pallet 4: Sabun Mandi (HOU-001) (X = 0.8f, Z = -9.5f)
+    storagePallets.push_back({ { 0.8f, 0.4f, -9.5f }, { 1.5f, 0.8f, 1.5f }, ProductType::SOAP_BAR, { 140, 100, 60, 255 } });
+
+    // Pallet 5: Biskuit Cokelat (SNK-001) (X = -1.0f, Z = -9.5f)
+    storagePallets.push_back({ { -1.0f, 0.4f, -9.5f }, { 1.5f, 0.8f, 1.5f }, ProductType::SNACK_BISCUIT, { 170, 115, 75, 255 } });
+
+    // Pallet 6: Mie Instan (FOD-002) (X = -2.8f, Z = -9.5f)
+    storagePallets.push_back({ { -2.8f, 0.4f, -9.5f }, { 1.5f, 0.8f, 1.5f }, ProductType::INSTANT_NOODLE, { 190, 125, 80, 255 } });
 }
 
 void Storage::BuildColliders() {

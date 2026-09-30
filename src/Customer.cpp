@@ -127,16 +127,12 @@ void Customer::GenerateShoppingList() {
     carriedItems.clear();
     currentShoppingItemIndex = 0;
 
-    std::vector<ProductType> allProducts = {
-        ProductType::BEVERAGE,
-        ProductType::BREAD,
-        ProductType::CANNED_FOOD
-    };
+    const auto& allProducts = GetAllProductTypes();
 
     switch (type) {
         case CustomerType::BIG_SHOPPER: {
-            // Big Shoppers buy 2 to 3 different product types (total 2 to 4 items)
-            int itemTypes = 2 + (id % 2); // 2 or 3 types
+            // Big Shoppers buy 2 to 4 different product types (total 2 to 5 items)
+            int itemTypes = 2 + (id % 3); // 2 to 4 types
             for (int i = 0; i < itemTypes && i < (int)allProducts.size(); ++i) {
                 ProductType p = allProducts[(id + i) % allProducts.size()];
                 int qty = 1 + (id % 2); // 1 or 2 items each
@@ -151,20 +147,21 @@ void Customer::GenerateShoppingList() {
             break;
         }
         case CustomerType::PRICE_SENSITIVE: {
-            // Price sensitive starts by looking for cheaper baseline products (Beverage / Bread)
-            ProductType p = (id % 2 == 0) ? ProductType::BEVERAGE : ProductType::BREAD;
+            // Price sensitive prefers essential drinks, bread, or soap
+            std::vector<ProductType> affordable = { ProductType::BEVERAGE, ProductType::INSTANT_NOODLE, ProductType::SOAP_BAR, ProductType::BREAD };
+            ProductType p = affordable[id % affordable.size()];
             shoppingList.push_back({ p, 1, 0 });
             if (id % 3 == 0) {
-                shoppingList.push_back({ ProductType::CANNED_FOOD, 1, 0 });
+                shoppingList.push_back({ ProductType::SNACK_BISCUIT, 1, 0 });
             }
             break;
         }
         case CustomerType::PATIENT: {
-            // Patient customer buys 1 or 2 items
+            // Patient customer buys 1 to 3 items
             ProductType p1 = allProducts[id % allProducts.size()];
             shoppingList.push_back({ p1, 1, 0 });
             if (id % 2 == 0) {
-                ProductType p2 = allProducts[(id + 1) % allProducts.size()];
+                ProductType p2 = allProducts[(id + 2) % allProducts.size()];
                 shoppingList.push_back({ p2, 1, 0 });
             }
             break;
@@ -173,8 +170,8 @@ void Customer::GenerateShoppingList() {
         default: {
             ProductType p1 = allProducts[id % allProducts.size()];
             shoppingList.push_back({ p1, 1, 0 });
-            if (id % 4 == 0) {
-                ProductType p2 = allProducts[(id + 2) % allProducts.size()];
+            if (id % 3 == 0) {
+                ProductType p2 = allProducts[(id + 3) % allProducts.size()];
                 shoppingList.push_back({ p2, 1, 0 });
             }
             break;

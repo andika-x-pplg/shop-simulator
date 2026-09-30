@@ -377,36 +377,76 @@ shop-simulator/
 │   ├── Customer.hpp    # State machine AI Customer, antrean, shopping list & kepuasan
 │   ├── DailyStats.hpp  # Agregator statistik harian & modal ringkasan
 │   ├── Finance.hpp     # Saldo toko, riwayat transaksi & penghitungan profit
+## Fitur Tahap 15 (Product & Inventory Expansion)
+- **Arsitektur Data Produk Skalabel (`Product.hpp`)**:
+  - Sentralisasi single source of truth untuk seluruh data produk melalui struct `ProductInfo`.
+  - ID numerik unik, SKU permanen, Kategori produk, harga beli supplier, harga jual standar, warna kemasan primer/sekunder, dan dimensi 3D bounding model.
+- **Sistem SKU Unik (Stock Keeping Unit)**:
+  - `DRK-001`: Air Mineral (Drink)
+  - `DRK-002`: Teh Botol (Drink)
+  - `FOD-001`: Roti Tawar (Food)
+  - `FOD-002`: Mie Instan (Food)
+  - `FOD-003`: Makanan Kaleng (Food)
+  - `SNK-001`: Biskuit Cokelat (Snack)
+  - `HOU-001`: Sabun Mandi (Household)
+  - `HOU-002`: Tisu Wajah (Household)
+- **Sistem Kategori Produk (`enum class ProductCategory`)**:
+  - 4 Kategori utama: `DRINK`, `FOOD`, `SNACK`, `HOUSEHOLD`.
+  - Identifikasi kategori terintegrasi di rak pajangan, pallet gudang, katalog supplier, dan UI manajemen toko.
+- **Ekspansi Rak Toko & Pallet Gudang (Shelf & Storage Stock)**:
+  - 6 Rak Toko 3D terpisah dengan sign banner dan rendering model unik untuk tiap item.
+  - 6 Pallet Gudang berjejer di area storage dengan tumpukan kotak dinamis sesuai jumlah stok cadangan.
+- **Sistem Statistik Penjualan & Best/Slow Seller (`PriceManager.hpp`, `PriceManager.cpp`)**:
+  - Pelacakan kuantitas terjual (`totalSold`), omset kotor (`totalRevenue`), laba bersih akumulatif (`totalProfit`), dan penjualan harian (`dailySold`).
+  - Indikator Popularitas dinamis (*Sangat Tinggi/Viral, Tinggi, Sedang, Rendah*).
+  - Algoritma analitik penentuan **Best Seller** dan **Slow Seller** otomatis berbasis data transaksi nyata.
+- **Integrasi Supplier & Shopping List Customer**:
+  - Modal Supplier (`TAB`) dan Menu Manajemen Harga (`P`) mendukung scroll windowing pagination untuk seluruh katalog produk.
+  - Customer AI secara dinamis membentuk keranjang belanja acak dari seluruh variasi produk.
+- **Kompatibilitas Save / Load (Tahap 11)**:
+  - Serialisasi stok seluruh rak, stok storage, harga dinamis, dan statistik penjualan dengan fallback default untuk versi save sebelumnya.
+
+```
+shop-simulator/
+├── CMakeLists.txt      # Build script CMake & Raylib linking
+├── README.md           # Dokumentasi & panduan teknis
+├── include/            # C++ Header files
+│   ├── AudioManager.hpp# Audio system procedural SFX
+│   ├── Cashier.hpp     # POS Machine, NPC Kasir & area kasir
+│   ├── Common.hpp      # Definisi AABB, math helper & types
+│   ├── Customer.hpp    # NPC Customer AI, Shopping list & Personality
+│   ├── DailyStats.hpp  # Statistik harian, omset & evaluasi
+│   ├── Finance.hpp     # Saldo kas toko, revenue, expenses & profit
 │   ├── Furniture.hpp   # Furniture 3D, peralatan toko & equipment bonuses
 │   ├── GameTime.hpp    # Sistem jam/hari (08:00 - 21:00) & warna langit
 │   ├── Player.hpp      # Player controller, first-person camera & held item
-│   ├── PriceManager.hpp# Penentuan harga jual, modal supplier & margin
-│   ├── Product.hpp     # Definisi item (Minuman, Roti, Makanan Kaleng)
+│   ├── PriceManager.hpp# Penentuan harga jual, modal supplier, margin & statistik produk
+│   ├── Product.hpp     # Definisi sentral produk, SKU, kategori & katalog produk (Tahap 15)
 │   ├── Rack.hpp        # Rak 3D, kapasitas stok bertingkat & visual produk
 │   ├── Reputation.hpp  # Reputasi toko (0-100), rating bintang (1-5) & ulasan
 │   ├── SaveSystem.hpp  # Serialisasi JSON, verifikasi data & Game Menu
-│   ├── Shop.hpp        # Arsitektur toko 3D, lampu atap & sistem storage
+│   ├── Shop.hpp        # Arsitektur toko 3D, 6 rak pajangan & sistem storage 6 pallet
 │   ├── ShopUpgrade.hpp # Upgrade fasilitas toko (4 kategori bertingkat)
-│   ├── Storage.hpp     # Pallet penyimpanan 3D & stok cadangan gudang
-│   └── Supplier.hpp    # Sistem pemesanan supplier & countdown delivery
+│   ├── Storage.hpp     # Pallet penyimpanan 3D & stok cadangan gudang multi-kategori
+│   └── Supplier.hpp    # Sistem pemesanan supplier & countdown delivery katalog 8 produk
 ├── src/                # C++ Source files
 │   ├── AudioManager.cpp# Implementasi sintesis SFX procedural & volume routing
 │   ├── Cashier.cpp     # Render kasir 3D, NPC kasir berseragam, mesin register & pembayaran
-│   ├── Customer.cpp    # Navigasi lorong, AI shopping list, antrean kasir, scoring kepuasan & rating
+│   ├── Customer.cpp    # Navigasi lorong, AI shopping list 8 produk, antrean kasir & rating
 │   ├── DailyStats.cpp  # Implementasi agregasi statistik harian & render modal ringkasan harian
 │   ├── Finance.cpp     # Pencatatan transaksi pendapatan, pengeluaran & perhitungan profit
 │   ├── Furniture.cpp   # Render 3D furniture/equipment, collider generator & bonus logic
 │   ├── GameTime.cpp    # Perhitungan waktu 1s = 1m game, transisi hari, peringatan jam & sky
 │   ├── Player.cpp      # Pergerakan, first-person camera & render held item
-│   ├── PriceManager.cpp# Penyesuaian harga jual, validasi batas & kalkulasi margin
-│   ├── Rack.cpp        # Implementasi render rak bertingkat, batas kapasitas dinamis & visual produk
+│   ├── PriceManager.cpp# Penyesuaian harga jual, analisis Best/Slow seller & statistik penjualan
+│   ├── Rack.cpp        # Implementasi render rak bertingkat, batas kapasitas dinamis & visual 8 produk
 │   ├── Reputation.cpp  # Kalkulasi rata-rata rating, penyesuaian reputasi toko & riwayat ulasan
 │   ├── SaveSystem.cpp  # Serialisasi/deserialisasi savegame.json, validasi & Game Menu UI
 │   ├── Shop.cpp        # Dynamic shop expansion, ceiling lights, storage, waypoint & collider
 │   ├── ShopUpgrade.cpp # Logika upgrade toko, validasi balance, & modal UI upgrade
-│   ├── Storage.cpp     # Render pallet gudang 3D, kapasitas maksimum & manajemen stok gudang
+│   ├── Storage.cpp     # Render 6 pallet gudang 3D, kapasitas maksimum & manajemen stok gudang
 │   ├── Supplier.cpp    # Pengadaan barang, countdown delivery & transfer stok otomatis ke gudang
-│   └── main.cpp        # Game loop utama, audio cues, modal UI (Save/U/B/TAB/P/F/R/Summary), & HUD
+│   └── main.cpp        # Game loop utama, modal UI windowed scroll (Save/U/B/TAB/P/F/R/Summary) & HUD
 └── assets/             # Direktori aset (models, textures, sounds, fonts)
 ```
 
@@ -419,8 +459,8 @@ shop-simulator/
 - **F5 / F9**: Quick Save / Quick Load
 - **U**: Buka / Tutup Menu Upgrade Toko (Shop Size, Shelf, Storage, Customer)
 - **B**: Buka / Tutup Menu Beli Furniture & Peralatan (Shop Catalog)
-- **TAB**: Buka / Tutup Menu Pengadaan Barang Supplier
-- **P**: Buka / Tutup Menu Manajemen Harga Jual
+- **TAB**: Buka / Tutup Menu Pengadaan Barang Supplier (Katalog 8 Produk dengan Scroll)
+- **P**: Buka / Tutup Menu Manajemen Produk, Harga Jual & Statistik Penjualan
 - **F**: Buka / Tutup Menu Ringkasan Keuangan Toko
 - **R**: Buka / Tutup Menu Reputasi & Rating Toko
 - **ENTER / SPASI**: Konfirmasi Menu / Memulai Hari Berikutnya (di Daily Summary)

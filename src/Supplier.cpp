@@ -7,11 +7,7 @@ Supplier::Supplier()
       orderQuantity(10),
       orderIdCounter(1)
 {
-    availableProducts = {
-        ProductType::BEVERAGE,
-        ProductType::BREAD,
-        ProductType::CANNED_FOOD
-    };
+    availableProducts = GetAllProductTypes();
 }
 
 void Supplier::Init() {

@@ -45,18 +45,37 @@ struct SaveData {
     int totalRatings;
     int totalRatingPoints;
 
-    // Product Stocks
+    // Product Stocks (Extended for Tahap 15)
     int rackBeverageStock;
     int rackBreadStock;
     int rackCannedFoodStock;
+    int rackSoapStock;
+    int rackTeaStock;
+    int rackNoodleStock;
     int storageBeverageStock;
     int storageBreadStock;
     int storageCannedFoodStock;
+    int storageSoapStock;
+    int storageTeaStock;
+    int storageNoodleStock;
 
-    // Prices
+    // Prices (Extended for Tahap 15)
     int sellPriceBeverage;
     int sellPriceBread;
     int sellPriceCannedFood;
+    int sellPriceSoap;
+    int sellPriceTea;
+    int sellPriceNoodle;
+    int sellPriceBiscuit;
+    int sellPriceJuice;
+
+    // Product Statistics (Tahap 15)
+    struct ProductStatSave {
+        int totalSold;
+        int totalRevenue;
+        int totalProfit;
+    };
+    std::map<int, ProductStatSave> productStats;
 
     // Upgrades (Levels 1-3)
     int shopSizeLevel;
