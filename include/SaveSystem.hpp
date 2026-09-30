@@ -15,6 +15,22 @@ class Furniture;
 class Supplier;
 class GameTime;
 class DailyStats;
+class EmployeeManager;
+
+struct EmployeeSaveData {
+    int id;
+    std::string name;
+    int role;
+    int salary;
+    int hiringCost;
+    int level;
+    int experience;
+    int skill;
+    int morale;
+    int productivity;
+    int status;
+    bool isHired;
+};
 
 struct SaveData {
     int saveVersion; // default: 1
@@ -103,6 +119,10 @@ struct SaveData {
     };
     std::vector<OrderData> activeOrders;
 
+    // Employees (Tahap 16)
+    std::vector<EmployeeSaveData> activeEmployees;
+    std::vector<EmployeeSaveData> candidateEmployees;
+
     SaveData();
 };
 
@@ -124,6 +144,7 @@ public:
                   const Supplier& supplier,
                   const GameTime& gameTime,
                   const DailyStats& dailyStats,
+                  const EmployeeManager& employeeMgr,
                   std::string& outMessage);
 
     bool LoadGame(const std::string& filepath,
@@ -137,6 +158,7 @@ public:
                   Supplier& supplier,
                   GameTime& gameTime,
                   DailyStats& dailyStats,
+                  EmployeeManager& employeeMgr,
                   std::string& outMessage);
 
     bool HasSaveGame(const std::string& filepath) const;

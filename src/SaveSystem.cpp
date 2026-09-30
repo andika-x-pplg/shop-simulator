@@ -9,6 +9,7 @@
 #include "Supplier.hpp"
 #include "GameTime.hpp"
 #include "DailyStats.hpp"
+#include "EmployeeManager.hpp"
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -128,6 +129,7 @@ bool SaveSystem::SaveGame(const std::string& filepath,
                           const Supplier& supplier,
                           const GameTime& gameTime,
                           const DailyStats& dailyStats,
+                          const EmployeeManager& employeeMgr,
                           std::string& outMessage)
 {
     EnsureSaveDirectoryExists(filepath);
@@ -211,6 +213,10 @@ bool SaveSystem::SaveGame(const std::string& filepath,
         data.activeOrders.push_back({ static_cast<int>(ord.productType), ord.quantity, ord.deliveryTimer });
     }
 
+    for (const auto& emp : employeeMgr.GetActiveEmployees()) {
+        data.activeEmployees.push_back({ emp.id, emp.name, (int)emp.role, emp.salary, emp.hiringCost, emp.level, emp.experience, emp.skill, emp.morale, emp.productivity, (int)emp.status, emp.isHired });
+    }
+
     // Write structured JSON formatted save
     file << "{\n";
     file << "  \"saveVersion\": " << data.saveVersion << ",\n";
@@ -288,6 +294,15 @@ bool SaveSystem::SaveGame(const std::string& filepath,
         file << "    { \"type\": " << ord.productType << ", \"qty\": " << ord.quantity << ", \"timer\": " << ord.remainingTime << " }"
              << (i + 1 < data.activeOrders.size() ? ",\n" : "\n");
     }
+    file << "  ],\n";
+    file << "  \"employees\": [\n";
+    for (size_t i = 0; i < data.activeEmployees.size(); ++i) {
+        const auto& emp = data.activeEmployees[i];
+        file << "    { \"id\": " << emp.id << ", \"name\": \"" << emp.name << "\", \"role\": " << emp.role << ", \"salary\": " << emp.salary
+             << ", \"hiringCost\": " << emp.hiringCost << ", \"level\": " << emp.level << ", \"exp\": " << emp.experience
+             << ", \"skill\": " << emp.skill << ", \"morale\": " << emp.morale << ", \"prod\": " << emp.productivity
+             << ", \"status\": " << emp.status << " }" << (i + 1 < data.activeEmployees.size() ? ",\n" : "\n");
+    }
     file << "  ]\n";
     file << "}\n";
 
@@ -351,6 +366,7 @@ bool SaveSystem::LoadGame(const std::string& filepath,
                           Supplier& supplier,
                           GameTime& gameTime,
                           DailyStats& dailyStats,
+                          EmployeeManager& employeeMgr,
                           std::string& outMessage)
 {
     if (!HasSaveGame(filepath)) {
@@ -498,6 +514,58 @@ bool SaveSystem::LoadGame(const std::string& filepath,
     priceMgr.SetSellPrice(ProductType::INSTANT_NOODLE, data.sellPriceNoodle, fb);
     priceMgr.SetSellPrice(ProductType::SNACK_BISCUIT, data.sellPriceBiscuit, fb);
     priceMgr.SetSellPrice(ProductType::TISSUE_PACK, data.sellPriceJuice, fb);
+
+    // Deserialize Employees (Tahap 16)
+    employeeMgr.ClearAllEmployees();
+    size_t empArrayPos = content.find("\"employees\": [");
+    if (empArrayPos != std::string::npos) {
+        size_t arrayEnd = content.find(']', empArrayPos);
+        if (arrayEnd != std::string::npos) {
+            std::string empSection = content.substr(empArrayPos, arrayEnd - empArrayPos);
+            size_t objStart = 0;
+            while ((objStart = empSection.find('{', objStart)) != std::string::npos) {
+                size_t objEnd = empSection.find('}', objStart);
+                if (objEnd == std::string::npos) break;
+
+                std::string objStr = empSection.substr(objStart, objEnd - objStart + 1);
+
+                Employee emp;
+                emp.id = ReadInt(objStr, "id", 1);
+                std::string n;
+                if (ExtractJsonValue(objStr, "name", n)) emp.name = n; else emp.name = "Employee";
+                emp.role = static_cast<EmployeeRole>(ReadInt(objStr, "role", 0));
+                emp.salary = ReadInt(objStr, "salary", 40000);
+                emp.hiringCost = ReadInt(objStr, "hiringCost", 80000);
+                emp.level = ReadInt(objStr, "level", 1);
+                emp.experience = ReadInt(objStr, "exp", 0);
+                emp.skill = ReadInt(objStr, "skill", 60);
+                emp.morale = ReadInt(objStr, "morale", 80);
+                emp.productivity = ReadInt(objStr, "prod", 75);
+                emp.status = static_cast<EmployeeStatus>(ReadInt(objStr, "status", 1));
+                emp.isHired = true;
+
+                // Set appropriate colors based on role
+                emp.skinColor = { 245, 210, 180, 255 };
+                if (emp.role == EmployeeRole::CASHIER) {
+                    emp.shirtColor = { 41, 128, 185, 255 };
+                    emp.accessoryColor = { 241, 196, 15, 255 };
+                } else if (emp.role == EmployeeRole::STOCKER) {
+                    emp.shirtColor = { 230, 126, 34, 255 };
+                    emp.accessoryColor = { 192, 57, 43, 255 };
+                } else {
+                    emp.shirtColor = { 39, 174, 96, 255 };
+                    emp.accessoryColor = { 46, 204, 113, 255 };
+                }
+                emp.pantsColor = { 45, 52, 54, 255 };
+                emp.heightScale = 1.0f;
+                emp.idleTimer = 0.0f;
+
+                employeeMgr.AddEmployeeDirect(emp);
+                objStart = objEnd + 1;
+            }
+        }
+    }
+    employeeMgr.RefreshCandidates();
 
     outMessage = "Game berhasil dimuat!";
     return true;

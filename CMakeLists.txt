@@ -39,6 +39,8 @@ set(SOURCES
     src/DailyStats.cpp
     src/SaveSystem.cpp
     src/AudioManager.cpp
+    src/Employee.cpp
+    src/EmployeeManager.cpp
 )
 
 # Header files for IDE navigation
@@ -61,6 +63,8 @@ set(HEADERS
     include/DailyStats.hpp
     include/SaveSystem.hpp
     include/AudioManager.hpp
+    include/Employee.hpp
+    include/EmployeeManager.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

@@ -14,6 +14,7 @@
 #include "DailyStats.hpp"
 #include "SaveSystem.hpp"
 #include "AudioManager.hpp"
+#include "EmployeeManager.hpp"
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -61,6 +62,10 @@ int main() {
     // Furniture & Equipment System (3D Models & Bonuses)
     Furniture furniture;
     furniture.Init();
+
+    // Employee System (Stage 16)
+    EmployeeManager& employeeMgr = EmployeeManager::Instance();
+    employeeMgr.Init();
 
     // Day & Time System (Tahap 10)
     GameTime gameTime;
@@ -118,6 +123,7 @@ int main() {
         reputation.Init(50);
         shopUpgrade.Init();
         furniture.Init();
+        employeeMgr.Init();
         gameTime.Init();
         dailyStats.Init();
         player.Init({ 0.0f, 0.0f, 10.0f });
@@ -153,6 +159,7 @@ int main() {
                 reputation.SetMenuOpen(false);
                 shopUpgrade.SetMenuOpen(false);
                 furniture.SetMenuOpen(false);
+                employeeMgr.SetMenuOpen(false);
                 DisableCursor();
             } else {
                 // Open Game Menu / Save Modal on ESC during gameplay
@@ -176,7 +183,7 @@ int main() {
             if (gameTime.IsDaySummaryOpen()) {
                 // Trigger Auto-save on day end if closing
                 std::string autoSaveMsg;
-                saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, autoSaveMsg);
+                saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, autoSaveMsg);
                 EnableCursor();
             }
         }
@@ -194,9 +201,15 @@ int main() {
                 dailyStats.ResetDaily();
                 priceMgr.ResetDailyStats();
 
+                // Pay employee daily salaries (Stage 16)
+                std::string salaryNotice;
+                if (employeeMgr.ProcessDailySalaries(finance, dailyStats, salaryNotice)) {
+                    nextDayNotice += " | " + salaryNotice;
+                }
+
                 // Trigger Autosave on new day start
                 std::string autoSaveMsg;
-                saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, autoSaveMsg);
+                saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, autoSaveMsg);
 
                 topNotice = nextDayNotice;
                 topNoticeColor = nextDayCol;
@@ -222,6 +235,7 @@ int main() {
                 reputation.SetMenuOpen(false);
                 shopUpgrade.SetMenuOpen(false);
                 furniture.SetMenuOpen(false);
+                employeeMgr.SetMenuOpen(false);
                 gameTime.SetDaySummaryOpen(false);
                 EnableCursor();
             } else {
@@ -232,7 +246,7 @@ int main() {
         // Quick Save (F5)
         if (IsKeyPressed(KEY_F5)) {
             std::string msg;
-            if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, msg)) {
+            if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, msg)) {
                 topNotice = "Quick Save: " + msg;
                 topNoticeColor = { 46, 204, 113, 235 };
                 audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
@@ -246,7 +260,7 @@ int main() {
         // Quick Load (F9)
         if (IsKeyPressed(KEY_F9)) {
             std::string msg;
-            if (saveSystem.LoadGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, msg)) {
+            if (saveSystem.LoadGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, msg)) {
                 customers.clear(); // Despawn active customer safely
                 spawnTimer = 2.0f;
                 topNotice = "Quick Load: " + msg;
@@ -269,7 +283,7 @@ int main() {
         }
 
         // -------------------------------------------------------------
-        // Modal Toggles (TAB: Supplier, P: Price, F: Finance, R: Reputation, U: Upgrade, B: Furniture)
+        // Modal Toggles (TAB: Supplier, P: Price, F: Finance, R: Reputation, U: Upgrade, B: Furniture, K: Employee)
         // -------------------------------------------------------------
         if (IsKeyPressed(KEY_TAB)) {
             audioMgr.PlayEvent(SoundEvent::CLICK);
@@ -281,6 +295,7 @@ int main() {
                 reputation.SetMenuOpen(false);
                 shopUpgrade.SetMenuOpen(false);
                 furniture.SetMenuOpen(false);
+                employeeMgr.SetMenuOpen(false);
                 gameTime.SetDaySummaryOpen(false);
                 saveSystem.SetMenuOpen(false);
                 EnableCursor();
@@ -299,6 +314,7 @@ int main() {
                 reputation.SetMenuOpen(false);
                 shopUpgrade.SetMenuOpen(false);
                 furniture.SetMenuOpen(false);
+                employeeMgr.SetMenuOpen(false);
                 gameTime.SetDaySummaryOpen(false);
                 saveSystem.SetMenuOpen(false);
                 EnableCursor();
@@ -317,6 +333,7 @@ int main() {
                 reputation.SetMenuOpen(false);
                 shopUpgrade.SetMenuOpen(false);
                 furniture.SetMenuOpen(false);
+                employeeMgr.SetMenuOpen(false);
                 gameTime.SetDaySummaryOpen(false);
                 saveSystem.SetMenuOpen(false);
                 EnableCursor();
@@ -335,6 +352,7 @@ int main() {
                 finance.SetMenuOpen(false);
                 shopUpgrade.SetMenuOpen(false);
                 furniture.SetMenuOpen(false);
+                employeeMgr.SetMenuOpen(false);
                 gameTime.SetDaySummaryOpen(false);
                 saveSystem.SetMenuOpen(false);
                 EnableCursor();
@@ -353,6 +371,7 @@ int main() {
                 finance.SetMenuOpen(false);
                 reputation.SetMenuOpen(false);
                 furniture.SetMenuOpen(false);
+                employeeMgr.SetMenuOpen(false);
                 gameTime.SetDaySummaryOpen(false);
                 saveSystem.SetMenuOpen(false);
                 EnableCursor();
@@ -371,6 +390,26 @@ int main() {
                 finance.SetMenuOpen(false);
                 reputation.SetMenuOpen(false);
                 shopUpgrade.SetMenuOpen(false);
+                employeeMgr.SetMenuOpen(false);
+                gameTime.SetDaySummaryOpen(false);
+                saveSystem.SetMenuOpen(false);
+                EnableCursor();
+            } else {
+                DisableCursor();
+            }
+        }
+
+        if (IsKeyPressed(KEY_K)) {
+            audioMgr.PlayEvent(SoundEvent::CLICK);
+            bool nextState = !employeeMgr.IsMenuOpen();
+            employeeMgr.SetMenuOpen(nextState);
+            if (nextState) {
+                supplier.SetMenuOpen(false);
+                priceMgr.SetMenuOpen(false);
+                finance.SetMenuOpen(false);
+                reputation.SetMenuOpen(false);
+                shopUpgrade.SetMenuOpen(false);
+                furniture.SetMenuOpen(false);
                 gameTime.SetDaySummaryOpen(false);
                 saveSystem.SetMenuOpen(false);
                 EnableCursor();
@@ -382,7 +421,7 @@ int main() {
         anyModalOpen = supplier.IsMenuOpen() || priceMgr.IsMenuOpen() || 
                        finance.IsMenuOpen() || reputation.IsMenuOpen() ||
                        shopUpgrade.IsMenuOpen() || furniture.IsMenuOpen() ||
-                       gameTime.IsDaySummaryOpen() || saveSystem.IsMenuOpen();
+                       employeeMgr.IsMenuOpen() || gameTime.IsDaySummaryOpen() || saveSystem.IsMenuOpen();
 
         // -------------------------------------------------------------
         // Save System Modal Inputs
@@ -406,7 +445,7 @@ int main() {
                 } else if (action == 1) {
                     // Save Game
                     std::string msg;
-                    if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, msg)) {
+                    if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, msg)) {
                         topNotice = msg;
                         topNoticeColor = { 46, 204, 113, 235 };
                         audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
@@ -420,7 +459,7 @@ int main() {
                 } else if (action == 2) {
                     // Load Game
                     std::string msg;
-                    if (saveSystem.LoadGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, msg)) {
+                    if (saveSystem.LoadGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, msg)) {
                         customers.clear(); // Safely reset current customers
                         spawnTimer = 2.0f;
                         topNotice = msg;
@@ -725,6 +764,64 @@ int main() {
                 }
             }
         }
+        // -------------------------------------------------------------
+        // Employee Management Modal Inputs (K) (Stage 16)
+        // -------------------------------------------------------------
+        else if (employeeMgr.IsMenuOpen()) {
+            if (IsKeyPressed(KEY_TAB) || IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_E)) {
+                employeeMgr.SwitchTab();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+            if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
+                employeeMgr.PreviousItem();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+            if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
+                employeeMgr.NextItem();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+
+            // Tab 1: Active Employees -> Firing with confirmation
+            if (employeeMgr.GetActiveTab() == EmployeeMenuTab::MY_EMPLOYEES) {
+                if (employeeMgr.IsConfirmingFire()) {
+                    if (IsKeyPressed(KEY_Y)) {
+                        std::string fb;
+                        if (employeeMgr.FireEmployee(employeeMgr.GetSelectedIndex(), fb)) {
+                            topNotice = fb;
+                            topNoticeColor = { 231, 76, 60, 235 };
+                            topNoticeTimer = 3.5f;
+                            audioMgr.PlayEvent(SoundEvent::CLICK);
+                        }
+                    } else if (IsKeyPressed(KEY_N) || IsKeyPressed(KEY_ESCAPE)) {
+                        employeeMgr.SetConfirmingFire(false);
+                        audioMgr.PlayEvent(SoundEvent::CLICK);
+                    }
+                } else {
+                    if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_F)) {
+                        if (employeeMgr.GetActiveEmployeeCount() > 0) {
+                            employeeMgr.SetConfirmingFire(true);
+                            audioMgr.PlayEvent(SoundEvent::CLICK);
+                        }
+                    }
+                }
+            }
+            // Tab 2: Hiring Candidates
+            else {
+                if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                    std::string fb;
+                    int maxCap = employeeMgr.GetMaxEmployeeCapacity(shopUpgrade.GetShopSizeLevel());
+                    if (employeeMgr.HireEmployee(employeeMgr.GetSelectedIndex(), finance, dailyStats, maxCap, fb)) {
+                        topNotice = fb;
+                        topNoticeColor = { 46, 204, 113, 235 };
+                        topNoticeTimer = 3.5f;
+                        audioMgr.PlayEvent(SoundEvent::PURCHASE);
+                    } else {
+                        player.SetFeedbackMessage(fb, 2.5f);
+                        audioMgr.PlayEvent(SoundEvent::CLICK);
+                    }
+                }
+            }
+        }
 
         // Update Top Notification Timer
         if (topNoticeTimer > 0.0f) {
@@ -754,9 +851,13 @@ int main() {
             audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
         }
 
-        // Check Interaction Targets (Look ray to Rack or Storage Pallets within 3.5m)
+        // Update Employee Manager (Stage 16: Idle / visuals / positioning)
+        employeeMgr.Update(deltaTime, shop);
+
+        // Check Interaction Targets (Look ray to Rack, Storage Pallets, or Employees within 3.5m)
         Rack* targetedRack = shop.GetTargetedRack(player.GetEyePosition(), player.GetLookDirection(), 3.5f);
         ProductType targetedStorageProduct = shop.GetStorage().GetTargetedProduct(player.GetPosition(), player.GetLookDirection(), 3.5f);
+        const Employee* nearbyEmployee = employeeMgr.GetNearbyEmployee(player.GetEyePosition(), player.GetLookDirection(), 3.5f);
 
         // Interaction Key 'E' Handling (Active even when shop is closed, e.g. for restocking)
         if (IsKeyPressed(KEY_E) && !anyModalOpen) {
@@ -937,6 +1038,7 @@ int main() {
             BeginMode3D(player.GetCamera());
                 shop.Render();
                 furniture.Render(); // 3D Furniture & Decorations
+                employeeMgr.Render3D(); // 3D Employees (Stage 16)
                 for (auto& cust : customers) {
                     cust.Render();
                 }
@@ -950,8 +1052,8 @@ int main() {
 
             // 2D HUD / UI Rendering
             // Top-Left Controls & Status Box
-            DrawRectangle(15, 15, 345, 410, { 15, 20, 25, 230 });
-            DrawRectangleLines(15, 15, 345, 410, { 70, 85, 100, 255 });
+            DrawRectangle(15, 15, 345, 430, { 15, 20, 25, 230 });
+            DrawRectangleLines(15, 15, 345, 430, { 70, 85, 100, 255 });
 
             DrawText("SHOP SIMULATOR 3D (Final Release)", 25, 23, 16, { 255, 215, 0, 255 });
             
@@ -971,25 +1073,27 @@ int main() {
             DrawText("F5 / F9  : Quick Save / Quick Load", 25, 157, 13, { 100, 220, 255, 255 });
             DrawText("TAB      : Menu Supplier & Order", 25, 175, 13, { 255, 180, 50, 255 });
             DrawText("P        : Manajemen Harga Jual", 25, 193, 13, { 100, 200, 255, 255 });
-            DrawText("F        : Ringkasan Keuangan Toko", 25, 211, 13, { 255, 220, 80, 255 });
-            DrawText("R        : Reputasi & Rating Toko", 25, 229, 13, { 241, 196, 15, 255 });
-            DrawText("U        : Upgrade Toko (Shop Upgrade)", 25, 247, 13, { 52, 152, 219, 255 });
-            DrawText("B        : Beli Furniture & Equipment", 25, 265, 13, { 230, 126, 34, 255 });
+            DrawText("K        : Manajemen Karyawan (Stage 16)", 25, 211, 13, { 0, 230, 200, 255 });
+            DrawText("F        : Ringkasan Keuangan Toko", 25, 229, 13, { 255, 220, 80, 255 });
+            DrawText("R        : Reputasi & Rating Toko", 25, 247, 13, { 241, 196, 15, 255 });
+            DrawText("U        : Upgrade Toko (Shop Upgrade)", 25, 265, 13, { 52, 152, 219, 255 });
+            DrawText("B        : Beli Furniture & Equipment", 25, 283, 13, { 230, 126, 34, 255 });
 
             // Carried Product Status
             std::string carriedText = "Membawa: " + player.GetHeldProductName();
             Color carriedColor = player.IsHoldingProduct() ? Color{ 255, 220, 50, 255 } : Color{ 180, 190, 200, 255 };
-            DrawText(carriedText.c_str(), 25, 287, 14, carriedColor);
+            DrawText(carriedText.c_str(), 25, 305, 14, carriedColor);
 
             // Treasury / Money Balance & Levels HUD
             std::string moneyText = "Uang Toko: Rp" + std::to_string(finance.GetCurrentBalance());
-            DrawText(moneyText.c_str(), 25, 307, 16, { 50, 255, 120, 255 });
+            DrawText(moneyText.c_str(), 25, 325, 16, { 50, 255, 120, 255 });
 
             // Shop & Upgrade Levels Summary on HUD
             std::string levelSummary = "Toko: Lvl " + std::to_string(shopUpgrade.GetShopSizeLevel()) +
                                         " | Rak: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::SHELF_CAPACITY)) +
-                                        " | Gudang: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::STORAGE_CAPACITY));
-            DrawText(levelSummary.c_str(), 25, 329, 12, { 100, 220, 255, 255 });
+                                        " | Gudang: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::STORAGE_CAPACITY)) +
+                                        " | Karyawan: " + std::to_string(employeeMgr.GetActiveEmployeeCount()) + "/" + std::to_string(employeeMgr.GetMaxEmployeeCapacity(shopUpgrade.GetShopSizeLevel()));
+            DrawText(levelSummary.c_str(), 25, 347, 12, { 100, 220, 255, 255 });
 
             // Rating & Reputation Indicators on HUD
             std::string repHudText = "";
@@ -999,20 +1103,30 @@ int main() {
             } else {
                 repHudText = "Rating: Belum ada | Reputasi: " + std::to_string(reputation.GetReputation()) + "/100";
             }
-            DrawText(repHudText.c_str(), 25, 349, 12, { 255, 215, 0, 255 });
+            DrawText(repHudText.c_str(), 25, 367, 12, { 255, 215, 0, 255 });
 
             // Storage Stock Summary
             std::string storageInfo = "Storage: Total " + std::to_string(shop.GetStorage().GetTotalStock()) +
                                       " / " + std::to_string(shop.GetStorage().GetMaxCapacity()) + " unit (TAB: Pengadaan)";
-            DrawText(storageInfo.c_str(), 25, 367, 12, { 255, 200, 120, 255 });
+            DrawText(storageInfo.c_str(), 25, 385, 12, { 255, 200, 120, 255 });
 
             // Customer / Cashier Status Debug
             std::string custCountText = "Customer: " + std::to_string(customers.size()) + "/" + std::to_string(maxCustCapacity) +
                                         " | Antrian Kasir: " + std::to_string(cashierQueueCount);
-            DrawText(custCountText.c_str(), 25, 385, 12, { 200, 230, 250, 255 });
+            DrawText(custCountText.c_str(), 25, 403, 12, { 200, 230, 250, 255 });
 
-            // Center Interaction Prompt (When player aims at rack or storage pallet)
-            if (targetedStorageProduct != ProductType::NONE) {
+            // Center Interaction Prompt (When player aims at rack, storage pallet, or employee)
+            if (nearbyEmployee != nullptr) {
+                std::string empInfo = "[Karyawan] " + nearbyEmployee->name + " (" + nearbyEmployee->GetRoleString() + " Lvl " + std::to_string(nearbyEmployee->level) +
+                                      ") | Skill: " + std::to_string(nearbyEmployee->skill) + " | Morale: " + std::to_string(nearbyEmployee->morale) + " | Gaji: Rp" + std::to_string(nearbyEmployee->salary) + "/hr";
+                int textWidth = MeasureText(empInfo.c_str(), 15);
+                int boxX = (screenWidth - textWidth) / 2 - 20;
+                int boxY = screenHeight / 2 + 50;
+                DrawRectangle(boxX, boxY, textWidth + 40, 36, { 15, 30, 40, 230 });
+                DrawRectangleLines(boxX, boxY, textWidth + 40, 36, { 0, 230, 200, 255 });
+                DrawText(empInfo.c_str(), boxX + 20, boxY + 10, 15, { 0, 230, 200, 255 });
+            }
+            else if (targetedStorageProduct != ProductType::NONE) {
                 std::string stPrompt = "";
                 Color stColor = { 255, 200, 100, 255 };
                 std::string pName = GetProductInfo(targetedStorageProduct).name;
@@ -1144,7 +1258,7 @@ int main() {
             if (!anyModalOpen) {
                 int centerX = screenWidth / 2;
                 int centerY = screenHeight / 2;
-                bool isTargeting = (targetedRack != nullptr || targetedStorageProduct != ProductType::NONE);
+                bool isTargeting = (targetedRack != nullptr || targetedStorageProduct != ProductType::NONE || nearbyEmployee != nullptr);
                 Color crosshairColor = isTargeting ? Color{ 46, 204, 113, 240 } : Color{ 255, 255, 255, 190 };
                 
                 // Crosshair reticle
@@ -1160,6 +1274,13 @@ int main() {
 
             // FPS Counter in top right
             DrawFPS(screenWidth - 90, 15);
+
+            // ==========================================
+            // EMPLOYEE MANAGEMENT MODAL (K) (Stage 16)
+            // ==========================================
+            if (employeeMgr.IsMenuOpen()) {
+                employeeMgr.RenderUI(screenWidth, screenHeight, finance.GetCurrentBalance(), shopUpgrade.GetShopSizeLevel());
+            }
 
             // ==========================================
             // SUPPLIER ORDER MODAL MENU (TAB)
