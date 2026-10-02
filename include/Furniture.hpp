@@ -30,6 +30,7 @@ struct FurnitureItem {
     Color primaryColor;
     Color secondaryColor;
     std::string description;
+    int requiredExpansionTier; // Stage 19: Zone / expansion tier requirement (0 = Main, 1 = Right Wing, 2 = Back Wing, etc.)
 };
 
 struct EquipmentItem {
@@ -56,6 +57,9 @@ public:
     const std::vector<FurnitureItem>& GetFurnitureList() const { return furnitureList; }
     const std::vector<EquipmentItem>& GetEquipmentList() const { return equipmentList; }
     bool IsFurnitureOwned(FurnitureType type) const;
+    bool IsFurnitureOwnedById(int id) const;
+    void SetFurnitureOwnedById(int id, bool owned);
+
     bool IsEquipmentOwned(EquipmentType type) const;
     void SetFurnitureOwned(FurnitureType type, bool owned) {
         for (auto& item : furnitureList) {
@@ -74,7 +78,7 @@ public:
     bool HasBetterCashierEquipment() const; // true jika BETTER_CASHIER dibeli
 
     // Purchase execution
-    bool PurchaseFurniture(int index, Finance& finance, std::string& outFeedback);
+    bool PurchaseFurniture(int index, Finance& finance, int currentExpansionTier, std::string& outFeedback);
     bool PurchaseEquipment(int index, Finance& finance, std::string& outFeedback);
 
     // Menu UI state (Tombol B)

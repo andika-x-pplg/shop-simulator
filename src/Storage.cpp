@@ -20,24 +20,30 @@ void Storage::Init() {
 void Storage::BuildStorageLayout() {
     storagePallets.clear();
 
-    // Storage Zone: located in the North-East / Back section (X = -2.0m to 7.0m, Z = -9.5m)
-    // Pallet 1: Minuman / Air Mineral (DRK-001) (X = 6.2m, Z = -9.5m)
-    storagePallets.push_back({ { 6.2f, 0.4f, -9.5f }, { 1.5f, 0.8f, 1.5f }, ProductType::BEVERAGE, { 185, 122, 87, 255 } });
+    // Storage Zone: located in the North-East / Back section
+    // Pallet 1: Minuman / Air Mineral (DRK-001)
+    storagePallets.push_back({ { 6.2f, 0.4f, -9.5f }, { 1.4f, 0.8f, 1.4f }, ProductType::BEVERAGE, { 185, 122, 87, 255 } });
 
-    // Pallet 2: Roti Tawar (FOD-001) (X = 4.4f, Z = -9.5f)
-    storagePallets.push_back({ { 4.4f, 0.4f, -9.5f }, { 1.5f, 0.8f, 1.5f }, ProductType::BREAD, { 205, 133, 63, 255 } });
+    // Pallet 2: Teh Botol (DRK-002)
+    storagePallets.push_back({ { 4.6f, 0.4f, -9.5f }, { 1.4f, 0.8f, 1.4f }, ProductType::TEA_BOTTLE, { 195, 125, 75, 255 } });
 
-    // Pallet 3: Makanan Kaleng (FOD-003) (X = 2.6f, Z = -9.5f)
-    storagePallets.push_back({ { 2.6f, 0.4f, -9.5f }, { 1.5f, 0.8f, 1.5f }, ProductType::CANNED_FOOD, { 160, 82, 45, 255 } });
+    // Pallet 3: Roti Tawar (FOD-001)
+    storagePallets.push_back({ { 3.0f, 0.4f, -9.5f }, { 1.4f, 0.8f, 1.4f }, ProductType::BREAD, { 205, 133, 63, 255 } });
 
-    // Pallet 4: Sabun Mandi (HOU-001) (X = 0.8f, Z = -9.5f)
-    storagePallets.push_back({ { 0.8f, 0.4f, -9.5f }, { 1.5f, 0.8f, 1.5f }, ProductType::SOAP_BAR, { 140, 100, 60, 255 } });
+    // Pallet 4: Makanan Kaleng (FOD-003)
+    storagePallets.push_back({ { 1.4f, 0.4f, -9.5f }, { 1.4f, 0.8f, 1.4f }, ProductType::CANNED_FOOD, { 160, 82, 45, 255 } });
 
-    // Pallet 5: Biskuit Cokelat (SNK-001) (X = -1.0f, Z = -9.5f)
-    storagePallets.push_back({ { -1.0f, 0.4f, -9.5f }, { 1.5f, 0.8f, 1.5f }, ProductType::SNACK_BISCUIT, { 170, 115, 75, 255 } });
+    // Pallet 5: Sabun Mandi (HOU-001)
+    storagePallets.push_back({ { -0.2f, 0.4f, -9.5f }, { 1.4f, 0.8f, 1.4f }, ProductType::SOAP_BAR, { 140, 100, 60, 255 } });
 
-    // Pallet 6: Mie Instan (FOD-002) (X = -2.8f, Z = -9.5f)
-    storagePallets.push_back({ { -2.8f, 0.4f, -9.5f }, { 1.5f, 0.8f, 1.5f }, ProductType::INSTANT_NOODLE, { 190, 125, 80, 255 } });
+    // Pallet 6: Biskuit Cokelat (SNK-001)
+    storagePallets.push_back({ { -1.8f, 0.4f, -9.5f }, { 1.4f, 0.8f, 1.4f }, ProductType::SNACK_BISCUIT, { 170, 115, 75, 255 } });
+
+    // Pallet 7: Mie Instan (FOD-002)
+    storagePallets.push_back({ { -3.4f, 0.4f, -9.5f }, { 1.4f, 0.8f, 1.4f }, ProductType::INSTANT_NOODLE, { 190, 125, 80, 255 } });
+
+    // Pallet 8: Tisu Wajah (HOU-002)
+    storagePallets.push_back({ { -5.0f, 0.4f, -9.5f }, { 1.4f, 0.8f, 1.4f }, ProductType::TISSUE_PACK, { 175, 140, 95, 255 } });
 }
 
 void Storage::BuildColliders() {
@@ -101,12 +107,12 @@ ProductType Storage::GetTargetedProduct(Vector3 playerPos, Vector3 playerLookDir
 
 void Storage::Render() {
     // 1. Storage Floor Demarcation / Yellow Hazard Striping
-    DrawCube({ 3.2f, 0.01f, -9.5f }, 8.0f, 0.02f, 3.2f, { 230, 200, 50, 120 });
-    DrawCubeWires({ 3.2f, 0.01f, -9.5f }, 8.0f, 0.02f, 3.2f, { 255, 215, 0, 255 });
+    DrawCube({ 0.6f, 0.01f, -9.5f }, 13.0f, 0.02f, 3.0f, { 230, 200, 50, 120 });
+    DrawCubeWires({ 0.6f, 0.01f, -9.5f }, 13.0f, 0.02f, 3.0f, { 255, 215, 0, 255 });
 
     // 2. Storage Area Overhead Sign
-    DrawCube({ 3.2f, 3.8f, -9.5f }, 3.5f, 0.5f, 0.15f, { 180, 100, 30, 255 });
-    DrawCubeWires({ 3.2f, 3.8f, -9.5f }, 3.5f, 0.5f, 0.15f, RAYWHITE);
+    DrawCube({ 0.6f, 3.8f, -9.5f }, 4.5f, 0.5f, 0.15f, { 180, 100, 30, 255 });
+    DrawCubeWires({ 0.6f, 3.8f, -9.5f }, 4.5f, 0.5f, 0.15f, RAYWHITE);
 
     // 3. Render Each Storage Pallet / Cargo Crates
     for (const auto& pallet : storagePallets) {

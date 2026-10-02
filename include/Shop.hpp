@@ -56,8 +56,13 @@ public:
     float GetShopWidth() const { return shopWidth; }
     float GetShopLength() const { return shopLength; }
 
+    // Stage 19: Physical Expansion Dimensions & Zones
+    int GetExpansionTier() const { return expansionTier; }
+    void SetExpansionDimensions(int tier);
+
 private:
     int shopSizeLevel;
+    int expansionTier;
     float shopWidth;
     float shopLength;
     float shopHeight;

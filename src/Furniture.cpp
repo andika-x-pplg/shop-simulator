@@ -21,7 +21,7 @@ void Furniture::Init() {
         1, "Meja Kayu Santai (Table)", FurnitureType::TABLE, 50000, false,
         { -7.2f, 0.45f, -7.5f }, { 1.8f, 0.9f, 1.4f },
         { 139, 90, 43, 255 }, { 160, 110, 60, 255 },
-        "Meja kayu estetik untuk mempercantik pojok toko"
+        "Meja kayu estetik untuk mempercantik pojok toko", 0
     });
 
     // 2. Chair (Kursi Tunggu Pelanggan) - Predefined spot near table
@@ -29,7 +29,7 @@ void Furniture::Init() {
         2, "Kursi Tunggu (Chair)", FurnitureType::CHAIR, 30000, false,
         { -7.2f, 0.45f, -5.8f }, { 0.8f, 0.9f, 0.8f },
         { 100, 60, 30, 255 }, { 180, 50, 50, 255 },
-        "Kursi santai bagi pelanggan yang berkunjung"
+        "Kursi santai bagi pelanggan yang berkunjung", 0
     });
 
     // 3. Display Shelf (Rak Display Showcase Premium) - Predefined spot in right wall
@@ -37,7 +37,7 @@ void Furniture::Init() {
         3, "Rak Showcase (Display Shelf)", FurnitureType::DISPLAY_SHELF, 100000, false,
         { 7.2f, 1.2f, 3.5f }, { 1.6f, 2.4f, 3.2f },
         { 45, 52, 60, 255 }, { 218, 165, 32, 255 },
-        "Rak pajangan premium berornamen emas modern"
+        "Rak pajangan premium berornamen emas modern", 0
     });
 
     // 4. Cabinet (Lemari Arsip Toko) - Predefined spot behind cashier
@@ -45,7 +45,7 @@ void Furniture::Init() {
         4, "Lemari Arsip (Cabinet)", FurnitureType::CABINET, 150000, false,
         { 7.5f, 1.25f, 9.8f }, { 1.6f, 2.5f, 1.2f },
         { 70, 75, 85, 255 }, { 200, 205, 215, 255 },
-        "Lemari kabinet dokumen toko & perlengkapan kasir"
+        "Lemari kabinet dokumen toko & perlengkapan kasir", 0
     });
 
     // 5. Decoration Plant (Tanaman Hias Toko) - Predefined spot at shop entrance lobby
@@ -53,7 +53,48 @@ void Furniture::Init() {
         5, "Tanaman Hias (Decoration Plant)", FurnitureType::DECORATION_PLANT, 25000, false,
         { -2.8f, 0.6f, 10.5f }, { 0.8f, 1.2f, 0.8f },
         { 120, 70, 40, 255 }, { 34, 139, 34, 255 },
-        "Pot tanaman indoor hijau segar di dekat pintu masuk"
+        "Pot tanaman indoor hijau segar di dekat pintu masuk", 0
+    });
+
+    // Stage 19: Furniture Placement in Expansion Areas
+    // 6. Right Wing Showcase (Tier 1 Expansion)
+    furnitureList.push_back({
+        6, "Showcase Sayap Kanan (Right Showcase)", FurnitureType::DISPLAY_SHELF, 85000, false,
+        { 11.2f, 1.2f, -1.0f }, { 1.5f, 2.4f, 3.0f },
+        { 50, 60, 75, 255 }, { 241, 196, 15, 255 },
+        "Rak display mewah di sayap kanan area toko yang diperluas", 1
+    });
+
+    // 7. Right Wing Plant (Tier 1 Expansion)
+    furnitureList.push_back({
+        7, "Tanaman Hias Kanan (Right Wing Plant)", FurnitureType::DECORATION_PLANT, 30000, false,
+        { 11.2f, 0.6f, 8.5f }, { 0.8f, 1.2f, 0.8f },
+        { 120, 70, 40, 255 }, { 46, 204, 113, 255 },
+        "Tanaman hias indoor estetik untuk menyegarkan area perluasan kanan", 1
+    });
+
+    // 8. Back Lounge Table (Tier 2 Expansion)
+    furnitureList.push_back({
+        8, "Meja Santai Belakang (Back Lounge Table)", FurnitureType::TABLE, 65000, false,
+        { -8.5f, 0.45f, -12.0f }, { 2.0f, 0.9f, 1.4f },
+        { 130, 80, 35, 255 }, { 170, 120, 70, 255 },
+        "Meja lounge santai di area perluasan belakang toko", 2
+    });
+
+    // 9. Back Lounge Chair (Tier 2 Expansion)
+    furnitureList.push_back({
+        9, "Kursi Santai Belakang (Back Lounge Chair)", FurnitureType::CHAIR, 35000, false,
+        { -8.5f, 0.45f, -10.5f }, { 0.8f, 0.9f, 0.8f },
+        { 90, 50, 25, 255 }, { 200, 60, 60, 255 },
+        "Kursi nyaman di area belakang toko untuk kenyamanan customer", 2
+    });
+
+    // 10. Grand Hall Archive Cabinet (Tier 3 Expansion)
+    furnitureList.push_back({
+        10, "Kabinet Grand Hall (Grand Cabinet)", FurnitureType::CABINET, 180000, false,
+        { 13.5f, 1.25f, -10.0f }, { 1.8f, 2.5f, 1.2f },
+        { 60, 65, 80, 255 }, { 220, 225, 235, 255 },
+        "Kabinet penyimpanan berkas & dekorasi eksklusif di Grand Hall", 3
     });
 
     equipmentList.clear();
@@ -78,9 +119,25 @@ void Furniture::Init() {
 
 bool Furniture::IsFurnitureOwned(FurnitureType type) const {
     for (const auto& item : furnitureList) {
-        if (item.type == type) return item.isOwned;
+        if (item.type == type && item.isOwned) return true;
     }
     return false;
+}
+
+bool Furniture::IsFurnitureOwnedById(int id) const {
+    for (const auto& item : furnitureList) {
+        if (item.id == id) return item.isOwned;
+    }
+    return false;
+}
+
+void Furniture::SetFurnitureOwnedById(int id, bool owned) {
+    for (auto& item : furnitureList) {
+        if (item.id == id) {
+            item.isOwned = owned;
+            return;
+        }
+    }
 }
 
 bool Furniture::IsEquipmentOwned(EquipmentType type) const {
@@ -102,12 +159,18 @@ bool Furniture::HasBetterCashierEquipment() const {
     return IsEquipmentOwned(EquipmentType::BETTER_CASHIER);
 }
 
-bool Furniture::PurchaseFurniture(int index, Finance& finance, std::string& outFeedback) {
+bool Furniture::PurchaseFurniture(int index, Finance& finance, int currentExpansionTier, std::string& outFeedback) {
     if (index < 0 || index >= (int)furnitureList.size()) return false;
 
     auto& item = furnitureList[index];
     if (item.isOwned) {
         outFeedback = item.name + " sudah dimiliki!";
+        return false;
+    }
+
+    // Check expansion tier requirement
+    if (currentExpansionTier < item.requiredExpansionTier) {
+        outFeedback = "Area belum dibuka! Beli Shop Expansion Tier " + std::to_string(item.requiredExpansionTier) + " (Tombol X)";
         return false;
     }
 

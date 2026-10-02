@@ -42,6 +42,7 @@ set(SOURCES
     src/Employee.cpp
     src/EmployeeManager.cpp
     src/RandomEventManager.cpp
+    src/ShopExpansion.cpp
 )
 
 # Header files for IDE navigation
@@ -67,6 +68,7 @@ set(HEADERS
     include/Employee.hpp
     include/EmployeeManager.hpp
     include/RandomEventManager.hpp
+    include/ShopExpansion.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

@@ -11,6 +11,7 @@
 #include "DailyStats.hpp"
 #include "EmployeeManager.hpp"
 #include "RandomEventManager.hpp"
+#include "ShopExpansion.hpp"
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -30,11 +31,14 @@ SaveData::SaveData()
       rackSoapStock(10), rackTeaStock(12), rackNoodleStock(15),
       storageBeverageStock(0), storageBreadStock(0), storageCannedFoodStock(0),
       storageSoapStock(0), storageTeaStock(0), storageNoodleStock(0),
+      storageBiscuitStock(0), storageTissueStock(0),
       sellPriceBeverage(5000), sellPriceBread(8000), sellPriceCannedFood(12000),
       sellPriceSoap(6000), sellPriceTea(7000), sellPriceNoodle(4500),
       sellPriceBiscuit(9000), sellPriceJuice(10000),
       shopSizeLevel(1), shelfCapacityLevel(1), storageCapacityLevel(1), customerCapacityLevel(1),
+      expansionLevel(0),
       tableOwned(false), chairOwned(false), displayShelfOwned(false), cabinetOwned(false), decorationPlantOwned(false),
+      expansionTableOwned(false), expansionChairOwned(false), expansionShelfOwned(false), expansionCabinetOwned(false), expansionPlantOwned(false),
       betterDisplayOwned(false), extraStorageRackOwned(false), betterCashierOwned(false),
       activeEventId(0), activeEventDuration(0.0f), activeEventProduct(0),
       challengeId(0), challengeTarget(0), challengeCurrent(0), challengeProduct(0),
@@ -104,6 +108,8 @@ bool SaveSystem::ValidateSaveData(SaveData& data, std::string& outWarning) {
     data.storageSoapStock = std::max(0, data.storageSoapStock);
     data.storageTeaStock = std::max(0, data.storageTeaStock);
     data.storageNoodleStock = std::max(0, data.storageNoodleStock);
+    data.storageBiscuitStock = std::max(0, data.storageBiscuitStock);
+    data.storageTissueStock = std::max(0, data.storageTissueStock);
 
     data.sellPriceBeverage = std::max(500, data.sellPriceBeverage);
     data.sellPriceBread = std::max(500, data.sellPriceBread);
@@ -118,6 +124,7 @@ bool SaveSystem::ValidateSaveData(SaveData& data, std::string& outWarning) {
     data.shelfCapacityLevel = std::max(1, std::min(3, data.shelfCapacityLevel));
     data.storageCapacityLevel = std::max(1, std::min(3, data.storageCapacityLevel));
     data.customerCapacityLevel = std::max(1, std::min(3, data.customerCapacityLevel));
+    data.expansionLevel = std::max(0, std::min(3, data.expansionLevel));
 
     return true;
 }
@@ -135,6 +142,7 @@ bool SaveSystem::SaveGame(const std::string& filepath,
                           const DailyStats& dailyStats,
                           const EmployeeManager& employeeMgr,
                           const RandomEventManager& eventMgr,
+                          const ShopExpansion& shopExpansion,
                           std::string& outMessage)
 {
     EnsureSaveDirectoryExists(filepath);
@@ -184,6 +192,8 @@ bool SaveSystem::SaveGame(const std::string& filepath,
     data.storageSoapStock = shop.GetStorage().GetStock(ProductType::SOAP_BAR);
     data.storageTeaStock = shop.GetStorage().GetStock(ProductType::TEA_BOTTLE);
     data.storageNoodleStock = shop.GetStorage().GetStock(ProductType::INSTANT_NOODLE);
+    data.storageBiscuitStock = shop.GetStorage().GetStock(ProductType::SNACK_BISCUIT);
+    data.storageTissueStock = shop.GetStorage().GetStock(ProductType::TISSUE_PACK);
 
     data.sellPriceBeverage = priceMgr.GetSellPrice(ProductType::BEVERAGE);
     data.sellPriceBread = priceMgr.GetSellPrice(ProductType::BREAD);
@@ -203,6 +213,7 @@ bool SaveSystem::SaveGame(const std::string& filepath,
     data.shelfCapacityLevel = shopUpgrade.GetLevel(UpgradeType::SHELF_CAPACITY);
     data.storageCapacityLevel = shopUpgrade.GetLevel(UpgradeType::STORAGE_CAPACITY);
     data.customerCapacityLevel = shopUpgrade.GetLevel(UpgradeType::CUSTOMER_CAPACITY);
+    data.expansionLevel = shopExpansion.GetCurrentExpansionLevel();
 
     data.tableOwned = furniture.IsFurnitureOwned(FurnitureType::TABLE);
     data.chairOwned = furniture.IsFurnitureOwned(FurnitureType::CHAIR);
@@ -276,7 +287,9 @@ bool SaveSystem::SaveGame(const std::string& filepath,
     file << "    \"storageCannedFood\": " << data.storageCannedFoodStock << ",\n";
     file << "    \"storageSoap\": " << data.storageSoapStock << ",\n";
     file << "    \"storageTea\": " << data.storageTeaStock << ",\n";
-    file << "    \"storageNoodle\": " << data.storageNoodleStock << "\n";
+    file << "    \"storageNoodle\": " << data.storageNoodleStock << ",\n";
+    file << "    \"storageBiscuit\": " << data.storageBiscuitStock << ",\n";
+    file << "    \"storageTissue\": " << data.storageTissueStock << "\n";
     file << "  },\n";
     file << "  \"prices\": {\n";
     file << "    \"beverage\": " << data.sellPriceBeverage << ",\n";
@@ -292,7 +305,8 @@ bool SaveSystem::SaveGame(const std::string& filepath,
     file << "    \"shopSize\": " << data.shopSizeLevel << ",\n";
     file << "    \"shelfCap\": " << data.shelfCapacityLevel << ",\n";
     file << "    \"storageCap\": " << data.storageCapacityLevel << ",\n";
-    file << "    \"customerCap\": " << data.customerCapacityLevel << "\n";
+    file << "    \"customerCap\": " << data.customerCapacityLevel << ",\n";
+    file << "    \"expansionLevel\": " << data.expansionLevel << "\n";
     file << "  },\n";
     file << "  \"furniture\": {\n";
     file << "    \"table\": " << (data.tableOwned ? "true" : "false") << ",\n";
@@ -319,69 +333,106 @@ bool SaveSystem::SaveGame(const std::string& filepath,
     file << "    \"chCompleted\": " << (data.challengeCompleted ? "true" : "false") << ",\n";
     file << "    \"chClaimed\": " << (data.challengeRewardClaimed ? "true" : "false") << "\n";
     file << "  },\n";
-    file << "  \"activeOrders\": [\n";
+    file << "  \"orders\": [\n";
     for (size_t i = 0; i < data.activeOrders.size(); ++i) {
-        const auto& ord = data.activeOrders[i];
-        file << "    { \"type\": " << ord.productType << ", \"qty\": " << ord.quantity << ", \"timer\": " << ord.remainingTime << " }"
+        file << "    { \"type\": " << data.activeOrders[i].productType
+             << ", \"qty\": " << data.activeOrders[i].quantity
+             << ", \"time\": " << std::fixed << std::setprecision(2) << data.activeOrders[i].remainingTime << " }"
              << (i + 1 < data.activeOrders.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
     file << "  \"employees\": [\n";
     for (size_t i = 0; i < data.activeEmployees.size(); ++i) {
         const auto& emp = data.activeEmployees[i];
-        file << "    { \"id\": " << emp.id << ", \"name\": \"" << emp.name << "\", \"role\": " << emp.role << ", \"salary\": " << emp.salary
-             << ", \"hiringCost\": " << emp.hiringCost << ", \"level\": " << emp.level << ", \"exp\": " << emp.experience
-             << ", \"skill\": " << emp.skill << ", \"morale\": " << emp.morale << ", \"prod\": " << emp.productivity
-             << ", \"status\": " << emp.status << " }" << (i + 1 < data.activeEmployees.size() ? ",\n" : "\n");
+        file << "    { \"id\": " << emp.id
+             << ", \"name\": \"" << emp.name << "\""
+             << ", \"role\": " << emp.role
+             << ", \"salary\": " << emp.salary
+             << ", \"hiringCost\": " << emp.hiringCost
+             << ", \"level\": " << emp.level
+             << ", \"exp\": " << emp.experience
+             << ", \"skill\": " << emp.skill
+             << ", \"morale\": " << emp.morale
+             << ", \"prod\": " << emp.productivity
+             << ", \"status\": " << emp.status << " }"
+             << (i + 1 < data.activeEmployees.size() ? ",\n" : "\n");
+    }
+    file << "  ],\n";
+    file << "  \"stats\": [\n";
+    size_t statIdx = 0;
+    for (const auto& kv : data.productStats) {
+        file << "    { \"type\": " << kv.first
+             << ", \"sold\": " << kv.second.totalSold
+             << ", \"revenue\": " << kv.second.totalRevenue
+             << ", \"profit\": " << kv.second.totalProfit << " }"
+             << (statIdx + 1 < data.productStats.size() ? ",\n" : "\n");
+        statIdx++;
     }
     file << "  ]\n";
     file << "}\n";
 
     file.close();
-    outMessage = "Game berhasil disimpan!";
+    outMessage = "Game berhasil disimpan ke Slot 1!";
     return true;
 }
 
-static bool ExtractJsonValue(const std::string& content, const std::string& key, std::string& outVal) {
-    size_t pos = content.find("\"" + key + "\"");
+static bool ExtractJsonValue(const std::string& json, const std::string& key, std::string& outVal) {
+    std::string searchKey = "\"" + key + "\":";
+    size_t pos = json.find(searchKey);
     if (pos == std::string::npos) return false;
 
-    size_t colon = content.find(':', pos);
-    if (colon == std::string::npos) return false;
+    size_t start = pos + searchKey.length();
+    while (start < json.length() && (json[start] == ' ' || json[start] == '\t' || json[start] == '\n' || json[start] == '\r')) {
+        start++;
+    }
 
-    size_t start = content.find_first_not_of(" \t\r\n", colon + 1);
-    if (start == std::string::npos) return false;
+    if (start >= json.length()) return false;
 
-    size_t end = content.find_first_of(",}\r\n", start);
-    if (end == std::string::npos) end = content.size();
-
-    outVal = content.substr(start, end - start);
-    // Trim quotes
-    if (!outVal.empty() && outVal.front() == '"') outVal.erase(outVal.begin());
-    if (!outVal.empty() && outVal.back() == '"') outVal.pop_back();
-    return true;
+    if (json[start] == '\"') {
+        size_t end = json.find('\"', start + 1);
+        if (end != std::string::npos) {
+            outVal = json.substr(start + 1, end - start - 1);
+            return true;
+        }
+    } else {
+        size_t end = json.find_first_of(",}\n\r", start);
+        if (end != std::string::npos) {
+            outVal = json.substr(start, end - start);
+            // Trim trailing spaces
+            while (!outVal.empty() && (outVal.back() == ' ' || outVal.back() == '\t')) {
+                outVal.pop_back();
+            }
+            return true;
+        }
+    }
+    return false;
 }
 
-static int ReadInt(const std::string& content, const std::string& key, int defaultVal) {
-    std::string val;
-    if (ExtractJsonValue(content, key, val)) {
-        try { return std::stoi(val); } catch (...) {}
+static int ReadInt(const std::string& json, const std::string& key, int defaultVal) {
+    std::string valStr;
+    if (ExtractJsonValue(json, key, valStr)) {
+        try {
+            return std::stoi(valStr);
+        } catch (...) {}
     }
     return defaultVal;
 }
 
-static float ReadFloat(const std::string& content, const std::string& key, float defaultVal) {
-    std::string val;
-    if (ExtractJsonValue(content, key, val)) {
-        try { return std::stof(val); } catch (...) {}
+static float ReadFloat(const std::string& json, const std::string& key, float defaultVal) {
+    std::string valStr;
+    if (ExtractJsonValue(json, key, valStr)) {
+        try {
+            return std::stof(valStr);
+        } catch (...) {}
     }
     return defaultVal;
 }
 
-static bool ReadBool(const std::string& content, const std::string& key, bool defaultVal) {
-    std::string val;
-    if (ExtractJsonValue(content, key, val)) {
-        return (val == "true" || val == "1");
+static bool ReadBool(const std::string& json, const std::string& key, bool defaultVal) {
+    std::string valStr;
+    if (ExtractJsonValue(json, key, valStr)) {
+        if (valStr == "true" || valStr == "1") return true;
+        if (valStr == "false" || valStr == "0") return false;
     }
     return defaultVal;
 }
@@ -399,10 +450,11 @@ bool SaveSystem::LoadGame(const std::string& filepath,
                           DailyStats& dailyStats,
                           EmployeeManager& employeeMgr,
                           RandomEventManager& eventMgr,
+                          ShopExpansion& shopExpansion,
                           std::string& outMessage)
 {
     if (!HasSaveGame(filepath)) {
-        outMessage = "Tidak ada save game yang ditemukan!";
+        outMessage = "File save tidak ditemukan!";
         return false;
     }
 
@@ -459,6 +511,8 @@ bool SaveSystem::LoadGame(const std::string& filepath,
     data.storageSoapStock = ReadInt(content, "storageSoap", 0);
     data.storageTeaStock = ReadInt(content, "storageTea", 0);
     data.storageNoodleStock = ReadInt(content, "storageNoodle", 0);
+    data.storageBiscuitStock = ReadInt(content, "storageBiscuit", 0);
+    data.storageTissueStock = ReadInt(content, "storageTissue", 0);
 
     data.sellPriceBeverage = ReadInt(content, "beverage", 5000);
     data.sellPriceBread = ReadInt(content, "bread", 8000);
@@ -473,6 +527,7 @@ bool SaveSystem::LoadGame(const std::string& filepath,
     data.shelfCapacityLevel = ReadInt(content, "shelfCap", 1);
     data.storageCapacityLevel = ReadInt(content, "storageCap", 1);
     data.customerCapacityLevel = ReadInt(content, "customerCap", 1);
+    data.expansionLevel = ReadInt(content, "expansionLevel", 0);
 
     data.tableOwned = ReadBool(content, "table", false);
     data.chairOwned = ReadBool(content, "chair", false);
@@ -484,7 +539,6 @@ bool SaveSystem::LoadGame(const std::string& filepath,
     data.extraStorageRackOwned = ReadBool(content, "extraStorage", false);
     data.betterCashierOwned = ReadBool(content, "betterCashier", false);
 
-    // Events & Challenges (Stage 18)
     data.activeEventId = ReadInt(content, "eventId", 0);
     data.activeEventDuration = ReadFloat(content, "eventDuration", 0.0f);
     data.activeEventProduct = ReadInt(content, "eventProduct", 0);
@@ -514,6 +568,9 @@ bool SaveSystem::LoadGame(const std::string& filepath,
     shopUpgrade.SetLevel(UpgradeType::CUSTOMER_CAPACITY, data.customerCapacityLevel);
     shop.SetShopSizeLevel(data.shopSizeLevel);
 
+    // Stage 19: Expansion Tier
+    shopExpansion.SetExpansionLevel(data.expansionLevel, shop);
+
     // Furniture & Equipment
     furniture.SetFurnitureOwned(FurnitureType::TABLE, data.tableOwned);
     furniture.SetFurnitureOwned(FurnitureType::CHAIR, data.chairOwned);
@@ -525,12 +582,12 @@ bool SaveSystem::LoadGame(const std::string& filepath,
     furniture.SetEquipmentOwned(EquipmentType::EXTRA_STORAGE_RACK, data.extraStorageRackOwned);
     furniture.SetEquipmentOwned(EquipmentType::BETTER_CASHIER, data.betterCashierOwned);
 
-    // Capacity sync
-    int finalShelfCap = shopUpgrade.GetShelfCapacity() + furniture.GetEquipmentShelfBonus();
+    // Capacity sync including expansion bonuses
+    int finalShelfCap = shopUpgrade.GetShelfCapacity() + furniture.GetEquipmentShelfBonus() + shopExpansion.GetBonusShelfStockCapacity();
     for (auto& r : shop.GetRacks()) {
         r.SetMaxStock(finalShelfCap);
     }
-    int finalStorageCap = shopUpgrade.GetStorageCapacity() + furniture.GetEquipmentStorageBonus();
+    int finalStorageCap = shopUpgrade.GetStorageCapacity() + furniture.GetEquipmentStorageBonus() + shopExpansion.GetBonusStorageCapacity();
     shop.GetStorage().SetMaxCapacity(finalStorageCap);
 
     // Stocks
@@ -548,6 +605,8 @@ bool SaveSystem::LoadGame(const std::string& filepath,
     shop.GetStorage().SetStock(ProductType::SOAP_BAR, data.storageSoapStock);
     shop.GetStorage().SetStock(ProductType::TEA_BOTTLE, data.storageTeaStock);
     shop.GetStorage().SetStock(ProductType::INSTANT_NOODLE, data.storageNoodleStock);
+    shop.GetStorage().SetStock(ProductType::SNACK_BISCUIT, data.storageBiscuitStock);
+    shop.GetStorage().SetStock(ProductType::TISSUE_PACK, data.storageTissueStock);
 
     // Prices
     std::string fb;
@@ -659,7 +718,7 @@ void SaveSystem::RenderMenu(int screenWidth, int screenHeight, const std::string
     DrawRectangle(modalX, modalY, modalW, modalH, { 22, 28, 38, 250 });
     DrawRectangleLines(modalX, modalY, modalW, modalH, { 52, 152, 219, 255 });
 
-    DrawText("GAME MENU & SAVE SYSTEM (Tahap 11)", modalX + 30, modalY + 22, 20, { 255, 215, 0, 255 });
+    DrawText("GAME MENU & SAVE SYSTEM", modalX + 30, modalY + 22, 20, { 255, 215, 0, 255 });
     DrawText("Kelola penyimpanan, pemuatan, atau memulai progres baru", modalX + 30, modalY + 48, 13, { 180, 195, 210, 255 });
 
     // Save Slot 1 Info Box

@@ -17,6 +17,7 @@ class GameTime;
 class DailyStats;
 class EmployeeManager;
 class RandomEventManager;
+class ShopExpansion;
 
 struct EmployeeSaveData {
     int id;
@@ -62,7 +63,7 @@ struct SaveData {
     int totalRatings;
     int totalRatingPoints;
 
-    // Product Stocks (Extended for Tahap 15)
+    // Product Stocks (Extended for Tahap 15 & Stage 19)
     int rackBeverageStock;
     int rackBreadStock;
     int rackCannedFoodStock;
@@ -75,6 +76,8 @@ struct SaveData {
     int storageSoapStock;
     int storageTeaStock;
     int storageNoodleStock;
+    int storageBiscuitStock;
+    int storageTissueStock;
 
     // Prices (Extended for Tahap 15)
     int sellPriceBeverage;
@@ -100,12 +103,20 @@ struct SaveData {
     int storageCapacityLevel;
     int customerCapacityLevel;
 
+    // Stage 19: Shop Expansion Level & Zones
+    int expansionLevel;
+
     // Furniture Owned (bools)
     bool tableOwned;
     bool chairOwned;
     bool displayShelfOwned;
     bool cabinetOwned;
     bool decorationPlantOwned;
+    bool expansionTableOwned;
+    bool expansionChairOwned;
+    bool expansionShelfOwned;
+    bool expansionCabinetOwned;
+    bool expansionPlantOwned;
 
     // Equipment Owned (bools)
     bool betterDisplayOwned;
@@ -160,6 +171,7 @@ public:
                   const DailyStats& dailyStats,
                   const EmployeeManager& employeeMgr,
                   const RandomEventManager& eventMgr,
+                  const ShopExpansion& shopExpansion,
                   std::string& outMessage);
 
     bool LoadGame(const std::string& filepath,
@@ -175,6 +187,7 @@ public:
                   DailyStats& dailyStats,
                   EmployeeManager& employeeMgr,
                   RandomEventManager& eventMgr,
+                  ShopExpansion& shopExpansion,
                   std::string& outMessage);
 
     bool HasSaveGame(const std::string& filepath) const;
