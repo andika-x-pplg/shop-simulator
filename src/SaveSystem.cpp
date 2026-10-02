@@ -12,6 +12,7 @@
 #include "EmployeeManager.hpp"
 #include "RandomEventManager.hpp"
 #include "ShopExpansion.hpp"
+#include "MarketSystem.hpp"
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -143,6 +144,7 @@ bool SaveSystem::SaveGame(const std::string& filepath,
                           const EmployeeManager& employeeMgr,
                           const RandomEventManager& eventMgr,
                           const ShopExpansion& shopExpansion,
+                          const MarketSystem& marketSystem,
                           std::string& outMessage)
 {
     EnsureSaveDirectoryExists(filepath);
@@ -245,6 +247,11 @@ bool SaveSystem::SaveGame(const std::string& filepath,
     data.challengeRepReward = eventMgr.GetChallengeRepReward();
     data.challengeCompleted = eventMgr.IsChallengeCompleted();
     data.challengeRewardClaimed = eventMgr.IsChallengeRewardClaimed();
+
+    // Stage 20: Market Data Export
+    for (const auto& entry : marketSystem.ExportMarketSaveData()) {
+        data.marketEntries.push_back({ entry.productType, entry.currentMarketPrice, entry.currentSupplierPrice, entry.demand, entry.trend });
+    }
 
     // Write structured JSON formatted save
     file << "{\n";
@@ -358,6 +365,17 @@ bool SaveSystem::SaveGame(const std::string& filepath,
              << (i + 1 < data.activeEmployees.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
+    file << "  \"market\": [\n";
+    for (size_t i = 0; i < data.marketEntries.size(); ++i) {
+        const auto& m = data.marketEntries[i];
+        file << "    { \"type\": " << m.productType
+             << ", \"mktPrice\": " << m.currentMarketPrice
+             << ", \"supPrice\": " << m.currentSupplierPrice
+             << ", \"demand\": " << m.demand
+             << ", \"trend\": " << m.trend << " }"
+             << (i + 1 < data.marketEntries.size() ? ",\n" : "\n");
+    }
+    file << "  ],\n";
     file << "  \"stats\": [\n";
     size_t statIdx = 0;
     for (const auto& kv : data.productStats) {
@@ -451,6 +469,7 @@ bool SaveSystem::LoadGame(const std::string& filepath,
                           EmployeeManager& employeeMgr,
                           RandomEventManager& eventMgr,
                           ShopExpansion& shopExpansion,
+                          MarketSystem& marketSystem,
                           std::string& outMessage)
 {
     if (!HasSaveGame(filepath)) {
@@ -675,6 +694,60 @@ bool SaveSystem::LoadGame(const std::string& filepath,
     eventMgr.LoadEventState(data.activeEventId, data.activeEventDuration, data.activeEventProduct,
                            data.challengeId, data.challengeTarget, data.challengeCurrent, data.challengeProduct,
                            data.challengeMoneyReward, data.challengeRepReward, data.challengeCompleted, data.challengeRewardClaimed);
+
+    // Deserialize Stage 20 Market Data
+    std::vector<MarketSystem::MarketSaveEntry> marketLoaded;
+    size_t mktArrayPos = content.find("\"market\": [");
+    if (mktArrayPos != std::string::npos) {
+        size_t arrayEnd = content.find(']', mktArrayPos);
+        if (arrayEnd != std::string::npos) {
+            std::string mktSection = content.substr(mktArrayPos, arrayEnd - mktArrayPos);
+            size_t objStart = 0;
+            while ((objStart = mktSection.find('{', objStart)) != std::string::npos) {
+                size_t objEnd = mktSection.find('}', objStart);
+                if (objEnd == std::string::npos) break;
+
+                std::string objStr = mktSection.substr(objStart, objEnd - objStart + 1);
+                MarketSystem::MarketSaveEntry entry;
+                entry.productType = ReadInt(objStr, "type", 0);
+                entry.currentMarketPrice = ReadInt(objStr, "mktPrice", 5000);
+                entry.currentSupplierPrice = ReadInt(objStr, "supPrice", 3000);
+                entry.demand = ReadInt(objStr, "demand", 50);
+                entry.trend = ReadInt(objStr, "trend", 1);
+                marketLoaded.push_back(entry);
+
+                objStart = objEnd + 1;
+            }
+        }
+    }
+    if (!marketLoaded.empty()) {
+        marketSystem.ImportMarketSaveData(marketLoaded);
+    }
+
+    // Deserialize Stats (Tahap 15)
+    size_t statArrayPos = content.find("\"stats\": [");
+    if (statArrayPos != std::string::npos) {
+        size_t arrayEnd = content.find(']', statArrayPos);
+        if (arrayEnd != std::string::npos) {
+            std::string statSection = content.substr(statArrayPos, arrayEnd - statArrayPos);
+            size_t objStart = 0;
+            while ((objStart = statSection.find('{', objStart)) != std::string::npos) {
+                size_t objEnd = statSection.find('}', objStart);
+                if (objEnd == std::string::npos) break;
+
+                std::string objStr = statSection.substr(objStart, objEnd - objStart + 1);
+                int pType = ReadInt(objStr, "type", 0);
+                int sold = ReadInt(objStr, "sold", 0);
+                int rev = ReadInt(objStr, "revenue", 0);
+                int prof = ReadInt(objStr, "profit", 0);
+                if (pType > 0) {
+                    priceMgr.SetProductStats(static_cast<ProductType>(pType), sold, rev, prof);
+                }
+
+                objStart = objEnd + 1;
+            }
+        }
+    }
 
     outMessage = "Game berhasil dimuat!";
     return true;

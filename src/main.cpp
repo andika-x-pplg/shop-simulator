@@ -17,6 +17,7 @@
 #include "EmployeeManager.hpp"
 #include "RandomEventManager.hpp"
 #include "ShopExpansion.hpp"
+#include "MarketSystem.hpp"
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -77,6 +78,10 @@ int main() {
     ShopExpansion& shopExpansion = ShopExpansion::Instance();
     shopExpansion.Init();
 
+    // Market Dynamics & Advanced Economy System (Stage 20)
+    MarketSystem& marketSystem = MarketSystem::Instance();
+    marketSystem.Init();
+
     // Day & Time System (Tahap 10)
     GameTime gameTime;
     gameTime.Init();
@@ -136,6 +141,7 @@ int main() {
         employeeMgr.Init();
         eventMgr.Init();
         shopExpansion.Init();
+        marketSystem.Init();
         gameTime.Init();
         dailyStats.Init();
         player.Init({ 0.0f, 0.0f, 10.0f });
@@ -199,7 +205,7 @@ int main() {
             if (gameTime.IsDaySummaryOpen()) {
                 // Trigger Auto-save on day end if closing
                 std::string autoSaveMsg;
-                saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, autoSaveMsg);
+                saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, autoSaveMsg);
                 EnableCursor();
             }
         }
@@ -217,6 +223,11 @@ int main() {
                 dailyStats.ResetDaily();
                 priceMgr.ResetDailyStats();
 
+                // Stage 20: Daily Market Fluctuations & Trend Updates
+                std::string mktNotice;
+                Color mktCol;
+                marketSystem.UpdateDailyMarket(gameTime.GetCurrentDay(), mktNotice, mktCol);
+
                 // Pay employee daily salaries (Stage 16)
                 std::string salaryNotice;
                 if (employeeMgr.ProcessDailySalaries(finance, dailyStats, salaryNotice)) {
@@ -228,11 +239,11 @@ int main() {
 
                 // Trigger Autosave on new day start
                 std::string autoSaveMsg;
-                saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, autoSaveMsg);
+                saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, autoSaveMsg);
 
-                topNotice = nextDayNotice;
+                topNotice = nextDayNotice + " | " + mktNotice;
                 topNoticeColor = nextDayCol;
-                topNoticeTimer = 4.0f;
+                topNoticeTimer = 4.5f;
 
                 // Reset customer spawn timer for the fresh day
                 spawnTimer = 2.0f;
@@ -257,6 +268,7 @@ int main() {
                 employeeMgr.SetMenuOpen(false);
                 eventMgr.SetMenuOpen(false);
                 shopExpansion.SetMenuOpen(false);
+                marketSystem.SetMenuOpen(false);
                 gameTime.SetDaySummaryOpen(false);
                 EnableCursor();
             } else {
@@ -267,7 +279,7 @@ int main() {
         // Quick Save (F5)
         if (IsKeyPressed(KEY_F5)) {
             std::string msg;
-            if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, msg)) {
+            if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, msg)) {
                 topNotice = "Quick Save: " + msg;
                 topNoticeColor = { 46, 204, 113, 235 };
                 audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
@@ -281,7 +293,7 @@ int main() {
         // Quick Load (F9)
         if (IsKeyPressed(KEY_F9)) {
             std::string msg;
-            if (saveSystem.LoadGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, msg)) {
+            if (saveSystem.LoadGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, msg)) {
                 customers.clear(); // Despawn active customer safely
                 spawnTimer = 2.0f;
                 topNotice = "Quick Load: " + msg;
@@ -481,6 +493,30 @@ int main() {
                 furniture.SetMenuOpen(false);
                 employeeMgr.SetMenuOpen(false);
                 eventMgr.SetMenuOpen(false);
+                marketSystem.SetMenuOpen(false);
+                gameTime.SetDaySummaryOpen(false);
+                saveSystem.SetMenuOpen(false);
+                EnableCursor();
+            } else {
+                DisableCursor();
+            }
+        }
+
+        // Market Dynamics & Economy Modal (J) (Stage 20)
+        if (IsKeyPressed(KEY_J)) {
+            audioMgr.PlayEvent(SoundEvent::CLICK);
+            bool nextState = !marketSystem.IsMenuOpen();
+            marketSystem.SetMenuOpen(nextState);
+            if (nextState) {
+                supplier.SetMenuOpen(false);
+                priceMgr.SetMenuOpen(false);
+                finance.SetMenuOpen(false);
+                reputation.SetMenuOpen(false);
+                shopUpgrade.SetMenuOpen(false);
+                furniture.SetMenuOpen(false);
+                employeeMgr.SetMenuOpen(false);
+                eventMgr.SetMenuOpen(false);
+                shopExpansion.SetMenuOpen(false);
                 gameTime.SetDaySummaryOpen(false);
                 saveSystem.SetMenuOpen(false);
                 EnableCursor();
@@ -493,7 +529,7 @@ int main() {
                        finance.IsMenuOpen() || reputation.IsMenuOpen() ||
                        shopUpgrade.IsMenuOpen() || furniture.IsMenuOpen() ||
                        employeeMgr.IsMenuOpen() || eventMgr.IsMenuOpen() ||
-                       shopExpansion.IsMenuOpen() ||
+                       shopExpansion.IsMenuOpen() || marketSystem.IsMenuOpen() ||
                        gameTime.IsDaySummaryOpen() || saveSystem.IsMenuOpen();
 
         // -------------------------------------------------------------
@@ -518,7 +554,7 @@ int main() {
                 } else if (action == 1) {
                     // Save Game
                     std::string msg;
-                    if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, msg)) {
+                    if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, msg)) {
                         topNotice = msg;
                         topNoticeColor = { 46, 204, 113, 235 };
                         audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
@@ -532,7 +568,7 @@ int main() {
                 } else if (action == 2) {
                     // Load Game
                     std::string msg;
-                    if (saveSystem.LoadGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, msg)) {
+                    if (saveSystem.LoadGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, msg)) {
                         customers.clear(); // Safely reset current customers
                         spawnTimer = 2.0f;
                         topNotice = msg;
@@ -580,10 +616,12 @@ int main() {
                 ProductType selType = supplier.GetSelectedProductType();
                 int qty = supplier.GetOrderQuantity();
                 std::string errorMsg = "";
-                float priceMult = eventMgr.GetSupplierBuyPriceMultiplier(selType);
-                int unitBuyPrice = (int)(GetProductInfo(selType).buyPrice * priceMult);
-                int costBefore = unitBuyPrice * qty;
-                if (supplier.PlaceOrder(selType, qty, finance, errorMsg)) {
+                float eventMult = eventMgr.GetSupplierBuyPriceMultiplier(selType);
+                float deliveryMult = eventMgr.GetSupplierDeliveryTimeMultiplier();
+                int baseMktSupplierPrice = marketSystem.GetCurrentSupplierPrice(selType);
+                int effectiveUnitBuyPrice = (int)(baseMktSupplierPrice * eventMult);
+                int costBefore = effectiveUnitBuyPrice * qty;
+                if (supplier.PlaceOrder(selType, qty, finance, errorMsg, effectiveUnitBuyPrice, deliveryMult)) {
                     dailyStats.RecordExpense(costBefore); // Record daily stats
                     topNotice = "-Rp" + std::to_string(costBefore) + " Pengadaan (" + std::to_string(qty) + "x " + GetProductInfo(selType).name + ")";
                     topNoticeColor = { 210, 50, 50, 235 };
@@ -931,6 +969,31 @@ int main() {
                 }
             }
         }
+        // -------------------------------------------------------------
+        // Market Dynamics Modal Inputs (J) (Stage 20)
+        // -------------------------------------------------------------
+        else if (marketSystem.IsMenuOpen()) {
+            if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
+                marketSystem.PreviousProduct();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+            if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
+                marketSystem.NextProduct();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+            if (IsKeyPressed(KEY_P)) {
+                // Quick transition to price management for selected product
+                marketSystem.SetMenuOpen(false);
+                priceMgr.SetMenuOpen(true);
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+            if (IsKeyPressed(KEY_TAB)) {
+                // Quick transition to supplier order
+                marketSystem.SetMenuOpen(false);
+                supplier.SetMenuOpen(true);
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+        }
 
         // Update Top Notification Timer
         if (topNoticeTimer > 0.0f) {
@@ -1219,43 +1282,44 @@ int main() {
 
             // 2D HUD / UI Rendering
             // Top-Left Controls & Status Box (Sized to fit all status & control text)
-            DrawRectangle(15, 15, 395, 485, { 15, 20, 25, 230 });
-            DrawRectangleLines(15, 15, 395, 485, { 70, 85, 100, 255 });
+            DrawRectangle(15, 15, 395, 500, { 15, 20, 25, 230 });
+            DrawRectangleLines(15, 15, 395, 500, { 70, 85, 100, 255 });
 
             DrawText("SHOP SIMULATOR 3D (Final Release)", 25, 23, 16, { 255, 215, 0, 255 });
             
             // Time & Shop Open/Closed Banner (Tahap 10)
             std::string timeHud = gameTime.GetDayString() + "  |  " + gameTime.GetFormattedTime();
-            DrawText(timeHud.c_str(), 25, 45, 16, { 255, 255, 255, 255 });
+            DrawText(timeHud.c_str(), 25, 43, 15, { 255, 255, 255, 255 });
 
             bool isShopOpen = gameTime.IsShopOpen();
             std::string shopStatusText = isShopOpen ? "STATUS TOKO: OPEN (08:00 - 21:00)" : "STATUS TOKO: CLOSED";
             Color shopStatusCol = isShopOpen ? Color{ 50, 255, 120, 255 } : Color{ 255, 80, 80, 255 };
-            DrawText(shopStatusText.c_str(), 25, 65, 13, shopStatusCol);
+            DrawText(shopStatusText.c_str(), 25, 61, 12, shopStatusCol);
 
-            DrawText("WASD     : Bergerak", 25, 85, 13, RAYWHITE);
-            DrawText("Mouse    : Kontrol Kamera", 25, 103, 13, RAYWHITE);
-            DrawText("E        : Interaksi Rak / Storage", 25, 121, 13, { 100, 230, 100, 255 });
-            DrawText("M / ESC  : Game Menu & Save/Load", 25, 139, 13, { 255, 215, 0, 255 });
-            DrawText("F5 / F9  : Quick Save / Quick Load", 25, 157, 13, { 100, 220, 255, 255 });
-            DrawText("TAB      : Menu Supplier & Order", 25, 175, 13, { 255, 180, 50, 255 });
-            DrawText("P        : Manajemen Harga Jual", 25, 193, 13, { 100, 200, 255, 255 });
-            DrawText("K        : Manajemen Karyawan (Stage 16-17)", 25, 211, 13, { 0, 230, 200, 255 });
-            DrawText("L        : Event Acak & Tantangan (Stage 18)", 25, 229, 13, { 241, 196, 15, 255 });
-            DrawText("X        : Perluasan Toko 3D (Shop Expansion)", 25, 247, 13, { 46, 204, 113, 255 });
-            DrawText("F        : Ringkasan Keuangan Toko", 25, 265, 13, { 255, 220, 80, 255 });
-            DrawText("R        : Reputasi & Rating Toko", 25, 283, 13, { 241, 196, 15, 255 });
-            DrawText("U        : Upgrade Toko (Shop Upgrade)", 25, 301, 13, { 52, 152, 219, 255 });
-            DrawText("B        : Beli Furniture & Equipment", 25, 319, 13, { 230, 126, 34, 255 });
+            DrawText("WASD     : Bergerak", 25, 79, 12, RAYWHITE);
+            DrawText("Mouse    : Kontrol Kamera", 25, 95, 12, RAYWHITE);
+            DrawText("E        : Interaksi Rak / Storage", 25, 111, 12, { 100, 230, 100, 255 });
+            DrawText("M / ESC  : Game Menu & Save/Load", 25, 127, 12, { 255, 215, 0, 255 });
+            DrawText("F5 / F9  : Quick Save / Quick Load", 25, 143, 12, { 100, 220, 255, 255 });
+            DrawText("TAB      : Menu Supplier & Order", 25, 159, 12, { 255, 180, 50, 255 });
+            DrawText("J        : Pasar & Tren Ekonomi (Stage 20)", 25, 175, 12, { 46, 204, 113, 255 });
+            DrawText("P        : Manajemen Harga Jual", 25, 191, 12, { 100, 200, 255, 255 });
+            DrawText("K        : Manajemen Karyawan (Stage 16-17)", 25, 207, 12, { 0, 230, 200, 255 });
+            DrawText("L        : Event Acak & Tantangan (Stage 18)", 25, 223, 12, { 241, 196, 15, 255 });
+            DrawText("X        : Perluasan Toko 3D (Shop Expansion)", 25, 239, 12, { 46, 204, 113, 255 });
+            DrawText("F        : Ringkasan Keuangan Toko", 25, 255, 12, { 255, 220, 80, 255 });
+            DrawText("R        : Reputasi & Rating Toko", 25, 271, 12, { 241, 196, 15, 255 });
+            DrawText("U        : Upgrade Toko (Shop Upgrade)", 25, 287, 12, { 52, 152, 219, 255 });
+            DrawText("B        : Beli Furniture & Equipment", 25, 303, 12, { 230, 126, 34, 255 });
 
             // Carried Product Status
             std::string carriedText = "Membawa: " + player.GetHeldProductName();
             Color carriedColor = player.IsHoldingProduct() ? Color{ 255, 220, 50, 255 } : Color{ 180, 190, 200, 255 };
-            DrawText(carriedText.c_str(), 25, 341, 14, carriedColor);
+            DrawText(carriedText.c_str(), 25, 323, 13, carriedColor);
 
             // Treasury / Money Balance & Levels HUD
             std::string moneyText = "Uang Toko: Rp" + std::to_string(finance.GetCurrentBalance());
-            DrawText(moneyText.c_str(), 25, 361, 16, { 50, 255, 120, 255 });
+            DrawText(moneyText.c_str(), 25, 341, 15, { 50, 255, 120, 255 });
 
             // Shop & Upgrade Levels Summary on HUD
             std::string levelSummary = "Toko: Lvl " + std::to_string(shopUpgrade.GetShopSizeLevel()) +
@@ -1263,7 +1327,7 @@ int main() {
                                         " | Rak: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::SHELF_CAPACITY)) +
                                         " | Gudang: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::STORAGE_CAPACITY)) +
                                         " | Staf: " + std::to_string(employeeMgr.GetActiveEmployeeCount()) + "/" + std::to_string(employeeMgr.GetMaxEmployeeCapacity(shopUpgrade.GetShopSizeLevel()));
-            DrawText(levelSummary.c_str(), 25, 383, 12, { 100, 220, 255, 255 });
+            DrawText(levelSummary.c_str(), 25, 361, 12, { 100, 220, 255, 255 });
 
             // Rating, Reputation, Cleanliness on HUD
             std::string repHudText = "";
@@ -1275,18 +1339,18 @@ int main() {
                 repHudText = "Rating: - | Rep: " + std::to_string(reputation.GetReputation()) + "/100" +
                              " | Bersih: " + std::to_string(employeeMgr.GetCleanliness()) + "%";
             }
-            DrawText(repHudText.c_str(), 25, 403, 12, { 255, 215, 0, 255 });
+            DrawText(repHudText.c_str(), 25, 379, 12, { 255, 215, 0, 255 });
 
             // Storage Stock Summary
             std::string storageInfo = "Storage: Total " + std::to_string(shop.GetStorage().GetTotalStock()) +
                                       " / " + std::to_string(shop.GetStorage().GetMaxCapacity()) + " unit (TAB: Pengadaan)";
-            DrawText(storageInfo.c_str(), 25, 421, 12, { 255, 200, 120, 255 });
+            DrawText(storageInfo.c_str(), 25, 397, 12, { 255, 200, 120, 255 });
 
             // Customer / Cashier Status Debug & Event info
             std::string custCountText = "Customer: " + std::to_string(customers.size()) + "/" + std::to_string(maxCustCapacity) +
                                         " | Antrian Kasir: " + std::to_string(cashierQueueCount) +
                                         (eventMgr.HasActiveEvent() ? (" | [Event: " + eventMgr.GetActiveEvent().name + "]") : "");
-            DrawText(custCountText.c_str(), 25, 439, 12, { 200, 230, 250, 255 });
+            DrawText(custCountText.c_str(), 25, 415, 12, { 200, 230, 250, 255 });
 
             // Center Interaction Prompt (When player aims at rack, storage pallet, or employee)
             if (nearbyEmployee != nullptr) {
@@ -1474,6 +1538,13 @@ int main() {
             }
 
             // ==========================================
+            // MARKET DYNAMICS & ECONOMY MODAL (J) (Stage 20)
+            // ==========================================
+            if (marketSystem.IsMenuOpen()) {
+                marketSystem.RenderUI(screenWidth, screenHeight, finance.GetCurrentBalance(), gameTime.GetCurrentDay());
+            }
+
+            // ==========================================
             // SUPPLIER ORDER MODAL MENU (TAB)
             // ==========================================
             if (supplier.IsMenuOpen()) {
@@ -1515,16 +1586,17 @@ int main() {
                     DrawText(pTitle.c_str(), modalX + 100, listY + 12, 15, isSelected ? Color{ 255, 230, 100, 255 } : RAYWHITE);
 
                     float pMult = eventMgr.GetSupplierBuyPriceMultiplier(pType);
-                    int effectiveBuyPrice = (int)(info.buyPrice * pMult);
+                    int mktSupplierPrice = marketSystem.GetCurrentSupplierPrice(pType);
+                    int effectiveBuyPrice = (int)(mktSupplierPrice * pMult);
 
                     std::string priceLine = "Beli: Rp" + std::to_string(effectiveBuyPrice) + 
                                             ((pMult != 1.0f) ? ((pMult < 1.0f) ? " [DISKON]" : " [NAIK]") : "") +
                                             "  |  Jual: Rp" + std::to_string(priceMgr.GetSellPrice(pType)) +
-                                            "  |  Storage: " + std::to_string(shop.GetStorage().GetStock(pType)) +
-                                            "  |  SKU: " + info.sku;
+                                            "  |  Pasar: Rp" + std::to_string(marketSystem.GetCurrentMarketPrice(pType)) +
+                                            "  |  Storage: " + std::to_string(shop.GetStorage().GetStock(pType));
                     DrawText(priceLine.c_str(), modalX + 100, listY + 34, 12, (pMult < 1.0f) ? Color{ 50, 255, 120, 255 } : (pMult > 1.0f) ? Color{ 255, 140, 100, 255 } : Color{ 180, 200, 220, 255 });
 
-                    std::string popText = "Popularitas: " + priceMgr.GetPopularityLevel(pType) + " (Terjual: " + std::to_string(priceMgr.GetProductStats(pType).totalSold) + ")";
+                    std::string popText = "Popularitas: " + priceMgr.GetPopularityLevel(pType) + " | Demand: " + std::to_string(marketSystem.GetDemand(pType)) + "/100 (" + GetMarketTrendName(marketSystem.GetTrend(pType)) + ")";
                     DrawText(popText.c_str(), modalX + 100, listY + 52, 11, { 255, 215, 0, 255 });
 
                     listY += 78;
@@ -1534,10 +1606,12 @@ int main() {
                 std::string pageStr = "Item " + std::to_string(curSel + 1) + " / " + std::to_string(prods.size()) + " (Gunakan Panah Atas/Bawah untuk Scroll)";
                 DrawText(pageStr.c_str(), modalX + 35, modalY + 308, 11, { 150, 170, 190, 255 });
 
-                ProductInfo selectedInfo = GetProductInfo(supplier.GetSelectedProductType());
+                ProductType curSelType = supplier.GetSelectedProductType();
+                ProductInfo selectedInfo = GetProductInfo(curSelType);
                 int curQty = supplier.GetOrderQuantity();
-                float selMult = eventMgr.GetSupplierBuyPriceMultiplier(supplier.GetSelectedProductType());
-                int curTotal = (int)(selectedInfo.buyPrice * selMult) * curQty;
+                float selMult = eventMgr.GetSupplierBuyPriceMultiplier(curSelType);
+                int curUnitCost = (int)(marketSystem.GetCurrentSupplierPrice(curSelType) * selMult);
+                int curTotal = curUnitCost * curQty;
 
                 int qtyBoxY = modalY + 328;
                 DrawRectangle(modalX + 30, qtyBoxY, modalW - 60, 96, { 20, 25, 32, 230 });
@@ -1608,26 +1682,31 @@ int main() {
                     std::string pTitle = "[" + info.sku + "] " + info.name + " (" + GetCategoryName(info.category) + ")" + (isSelected ? "  [DIPILIH]" : "");
                     DrawText(pTitle.c_str(), modalX + 95, listY + 10, 14, isSelected ? Color{ 255, 230, 100, 255 } : RAYWHITE);
 
-                    // Pricing breakdown: Modal, Pasar/Ref, Jual, Markup %, Status
-                    std::string priceLine = "Modal: Rp" + std::to_string(buyPrice) +
-                                            "  |  Pasar: Rp" + std::to_string(refPrice) +
+                    // Pricing breakdown: Modal Supplier, Pasar Dinamis, Jual Toko, Status Attractiveness
+                    int liveBuyPrice = marketSystem.GetCurrentSupplierPrice(pType);
+                    int liveMktPrice = marketSystem.GetCurrentMarketPrice(pType);
+                    std::string priceLine = "Modal: Rp" + std::to_string(liveBuyPrice) +
+                                            "  |  Pasar: Rp" + std::to_string(liveMktPrice) +
                                             "  |  Jual: Rp" + std::to_string(sellPrice);
                     DrawText(priceLine.c_str(), modalX + 95, listY + 28, 12, { 220, 230, 240, 255 });
 
                     // Markup badge & Profit
                     char markupStr[64];
                     std::snprintf(markupStr, sizeof(markupStr), "Markup: %+.1f%%", markup);
-                    Color statusCol = priceMgr.GetPriceStatusColor(pType);
-                    std::string statusTag = "[" + priceMgr.GetPriceStatusLabel(pType) + "]";
+                    Color statusCol = marketSystem.GetPriceAttractivenessColor(pType, sellPrice);
+                    std::string statusTag = "[" + marketSystem.GetPriceAttractivenessLabel(pType, sellPrice) + "]";
 
-                    std::string marginText = "Profit/Unit: " + (margin >= 0 ? ("+Rp" + std::to_string(margin)) : ("-Rp" + std::to_string(-margin)));
-                    DrawText(marginText.c_str(), modalX + 95, listY + 46, 12, (margin >= 0 ? Color{ 50, 255, 120, 255 } : Color{ 255, 80, 80, 255 }));
-                    DrawText(markupStr, modalX + 275, listY + 46, 12, statusCol);
-                    DrawText(statusTag.c_str(), modalX + 395, listY + 46, 12, statusCol);
+                    int unitProfit = marketSystem.CalculateUnitProfit(pType, sellPrice);
+                    float marginPct = marketSystem.CalculateProfitMarginPercent(pType, sellPrice);
+                    std::string marginText = "Profit: " + (unitProfit >= 0 ? ("+Rp" + std::to_string(unitProfit)) : ("-Rp" + std::to_string(-unitProfit))) +
+                                             " (" + TextFormat("%.0f%%", marginPct) + ")";
+                    DrawText(marginText.c_str(), modalX + 95, listY + 46, 12, (unitProfit >= 0 ? Color{ 50, 255, 120, 255 } : Color{ 255, 80, 80, 255 }));
+                    DrawText(statusTag.c_str(), modalX + 270, listY + 46, 12, statusCol);
 
-                    // Sales Stats
+                    // Sales Stats & Demand
+                    int demandVal = marketSystem.GetDemand(pType);
                     std::string statLine = "Terjual: " + std::to_string(stats.totalSold) + " unit | Omset: Rp" + std::to_string(stats.totalRevenue) +
-                                           " | Laba: Rp" + std::to_string(stats.totalProfit) + " | Pop: " + priceMgr.GetPopularityLevel(pType);
+                                           " | Demand: " + std::to_string(demandVal) + "/100 (" + GetMarketTrendName(marketSystem.GetTrend(pType)) + ")";
                     DrawText(statLine.c_str(), modalX + 95, listY + 66, 11, { 255, 215, 0, 255 });
 
                     if (isSelected) {

@@ -43,14 +43,15 @@ void Supplier::DecreaseQuantity(int step) {
     if (orderQuantity < 1) orderQuantity = 1;
 }
 
-bool Supplier::PlaceOrder(ProductType type, int quantity, Finance& finance, std::string& outErrorMessage) {
+bool Supplier::PlaceOrder(ProductType type, int quantity, Finance& finance, std::string& outErrorMessage, int customUnitCost, float deliveryTimeMult) {
     if (quantity <= 0) {
         outErrorMessage = "Jumlah pesanan harus lebih dari 0!";
         return false;
     }
 
     ProductInfo info = GetProductInfo(type);
-    int totalCost = info.buyPrice * quantity;
+    int unitBuyPrice = (customUnitCost > 0) ? customUnitCost : info.buyPrice;
+    int totalCost = unitBuyPrice * quantity;
 
     if (finance.GetCurrentBalance() < totalCost) {
         outErrorMessage = "Uang tidak cukup! Butuh Rp" + std::to_string(totalCost) + " (Saldo: Rp" + std::to_string(finance.GetCurrentBalance()) + ")";
@@ -58,19 +59,19 @@ bool Supplier::PlaceOrder(ProductType type, int quantity, Finance& finance, std:
     }
 
     // Deduct money and record expense through single Finance system (counted exactly once)
-    std::string desc = "Beli " + std::to_string(quantity) + "x " + info.name + " dari Supplier";
+    std::string desc = "Beli " + std::to_string(quantity) + "x " + info.name + " dari Supplier (Grosir Rp" + std::to_string(unitBuyPrice) + "/unit)";
     if (!finance.RecordExpense(totalCost, desc)) {
         outErrorMessage = "Gagal memproses pengeluaran!";
         return false;
     }
 
-    // Create delivery order (5 seconds delivery time)
+    // Create delivery order (5 seconds base delivery time modulated by event/modifiers)
     SupplierOrder order;
     order.orderId = orderIdCounter++;
     order.productType = type;
     order.quantity = quantity;
     order.totalCost = totalCost;
-    order.deliveryTimer = 5.0f;
+    order.deliveryTimer = std::max(1.5f, 5.0f * deliveryTimeMult);
     order.status = OrderStatus::ORDERED;
 
     activeOrders.push_back(order);

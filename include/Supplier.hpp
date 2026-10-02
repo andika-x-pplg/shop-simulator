@@ -29,8 +29,8 @@ public:
     void Init();
     void Update(float deltaTime, Storage& storage, std::vector<std::string>& outDeliveredNotices);
 
-    // Order operations with single-source Finance system
-    bool PlaceOrder(ProductType type, int quantity, Finance& finance, std::string& outErrorMessage);
+    // Order operations with single-source Finance system & dynamic market supplier price
+    bool PlaceOrder(ProductType type, int quantity, Finance& finance, std::string& outErrorMessage, int customUnitCost = -1, float deliveryTimeMult = 1.0f);
 
     // Active Orders & Delivery Queries
     const std::vector<SupplierOrder>& GetActiveOrders() const { return activeOrders; }

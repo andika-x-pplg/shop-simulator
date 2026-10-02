@@ -18,6 +18,15 @@ class DailyStats;
 class EmployeeManager;
 class RandomEventManager;
 class ShopExpansion;
+class MarketSystem;
+
+struct MarketSaveData {
+    int productType;
+    int currentMarketPrice;
+    int currentSupplierPrice;
+    int demand;
+    int trend;
+};
 
 struct EmployeeSaveData {
     int id;
@@ -148,6 +157,9 @@ struct SaveData {
     bool challengeCompleted;
     bool challengeRewardClaimed;
 
+    // Stage 20: Market System Data
+    std::vector<MarketSaveData> marketEntries;
+
     SaveData();
 };
 
@@ -172,6 +184,7 @@ public:
                   const EmployeeManager& employeeMgr,
                   const RandomEventManager& eventMgr,
                   const ShopExpansion& shopExpansion,
+                  const MarketSystem& marketSystem,
                   std::string& outMessage);
 
     bool LoadGame(const std::string& filepath,
@@ -188,6 +201,7 @@ public:
                   EmployeeManager& employeeMgr,
                   RandomEventManager& eventMgr,
                   ShopExpansion& shopExpansion,
+                  MarketSystem& marketSystem,
                   std::string& outMessage);
 
     bool HasSaveGame(const std::string& filepath) const;

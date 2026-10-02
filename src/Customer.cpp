@@ -1,6 +1,7 @@
 #include "Customer.hpp"
 #include "Shop.hpp"
 #include "PriceManager.hpp"
+#include "MarketSystem.hpp"
 #include <cmath>
 #include <algorithm>
 #include <map>
@@ -524,52 +525,13 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
         waitTimer += deltaTime;
 
         if (waitTimer >= maxWaitDuration) {
-            // Evaluate price dynamically
+            // Stage 20: Evaluate price dynamically against MarketSystem & Demand
             int curPrice = PriceManager::Instance().GetSellPrice(currentTargetProduct);
-            float markup = PriceManager::Instance().GetMarkupPercent(currentTargetProduct);
+            int mktPrice = MarketSystem::Instance().GetCurrentMarketPrice(currentTargetProduct);
+            int custTypeInt = static_cast<int>(type);
 
-            // Calculate base purchase probability based on price markup
-            float buyChance = 0.95f; // 95% base chance at reference price
-
-            if (markup <= -20.0f) {
-                buyChance = 1.00f; // Great discount -> 100%
-            } else if (markup <= -5.0f) {
-                buyChance = 0.98f; // Below market -> 98%
-            } else if (markup <= 10.0f) {
-                buyChance = 0.92f; // Normal / fair -> 92%
-            } else if (markup <= 25.0f) {
-                buyChance = 0.78f; // Slight markup -> 78%
-            } else if (markup <= 45.0f) {
-                buyChance = 0.55f; // Moderate markup -> 55%
-            } else if (markup <= 75.0f) {
-                buyChance = 0.28f; // High markup -> 28%
-            } else if (markup <= 100.0f) {
-                buyChance = 0.12f; // Very expensive -> 12%
-            } else {
-                buyChance = 0.03f; // Ridiculously expensive -> 3%
-            }
-
-            // Customer Type Sensitivities
-            switch (type) {
-                case CustomerType::PRICE_SENSITIVE:
-                    if (markup > 5.0f) buyChance *= 0.55f;
-                    if (markup > 30.0f) buyChance *= 0.30f;
-                    if (markup < 0.0f) buyChance = std::min(1.0f, buyChance + 0.1f);
-                    break;
-                case CustomerType::BIG_SHOPPER:
-                    if (markup > 0.0f && markup <= 25.0f) buyChance = std::min(0.95f, buyChance + 0.10f);
-                    if (markup > 50.0f) buyChance *= 0.70f;
-                    break;
-                case CustomerType::PATIENT:
-                    if (markup > 20.0f) buyChance *= 0.85f;
-                    break;
-                case CustomerType::IMPATIENT:
-                    if (markup > 40.0f) buyChance *= 0.60f;
-                    break;
-                case CustomerType::NORMAL:
-                default:
-                    break;
-            }
+            // Compute buy chance using MarketSystem formula (accounts for persona & demand)
+            float buyChance = MarketSystem::Instance().EvaluateCustomerBuyChance(currentTargetProduct, curPrice, custTypeInt, 0.95f);
 
             // Pseudo-random roll using customer id, item index, price, and time
             int rollSeed = (id * 37 + (int)currentShoppingItemIndex * 19 + curPrice + (int)(GetTime() * 10.0f)) % 100;
@@ -579,35 +541,63 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
                 // DECISION: BUY
                 state = CustomerState::TAKING_PRODUCT;
 
-                // Friendly buying dialogue
-                const std::vector<std::string> buyDialogues = {
-                    "Oke, aku ambil.",
-                    "Yang ini jadi.",
-                    "Kayaknya cocok.",
-                    "Aku beli ini.",
-                    "Ini masuk keranjang.",
-                    "Bagus, harganya pas."
-                };
+                // Dynamic contextual buying dialogue (Market, Trend, Demand aware)
+                std::vector<std::string> buyDialogues;
+                int diffPct = (mktPrice > 0) ? ((curPrice - mktPrice) * 100 / mktPrice) : 0;
+                int demandVal = MarketSystem::Instance().GetDemand(currentTargetProduct);
+
+                if (diffPct <= -10) {
+                    buyDialogues = {
+                        "Harganya murah banget di sini!",
+                        "Diskonnya bagus, langsung beli.",
+                        "Murah dibanding toko lain.",
+                        "Untung dapat harga murah!"
+                    };
+                } else if (demandVal >= 75) {
+                    buyDialogues = {
+                        "Produk ini lagi banyak dicari!",
+                        "Untung barang ini masih ada stok.",
+                        "Ini barang yang lagi tren.",
+                        "Oke, aku ambil produk ini."
+                    };
+                } else {
+                    buyDialogues = {
+                        "Oke, aku ambil.",
+                        "Harganya masih wajar dan masuk akal.",
+                        "Kayaknya cocok, beli satu.",
+                        "Ini masuk keranjang.",
+                        "Bagus, harganya pas."
+                    };
+                }
                 Say(buyDialogues[(id + rollSeed) % buyDialogues.size()], 2.5f, Color{ 235, 255, 240, 245 }, Color{ 20, 100, 40, 255 });
 
                 // Satisfaction adjustments
-                if (markup < -10.0f) {
+                if (diffPct < -10) {
                     satisfaction = std::min(100, satisfaction + 5);
-                } else if (markup > 35.0f) {
-                    satisfaction = std::max(20, satisfaction - 8);
+                } else if (diffPct > 30) {
+                    satisfaction = std::max(20, satisfaction - 5);
                 }
             } else {
-                // DECISION: REFUSE (Too expensive / not worth it)
-                const std::vector<std::string> refuseDialogues = {
-                    "Harganya terlalu mahal.",
-                    "Kayaknya kemahalan.",
-                    "Aku cari yang lebih murah.",
-                    "Harganya di luar budget.",
-                    "Kalau segini aku nggak jadi beli.",
-                    "Lebih baik cari produk lain.",
-                    "Hmm... kemahalan deh.",
-                    "Budget-ku nggak cukup buat ini."
-                };
+                // DECISION: REFUSE (Too expensive / above market / low value)
+                std::vector<std::string> refuseDialogues;
+                int diffPct = (mktPrice > 0) ? ((curPrice - mktPrice) * 100 / mktPrice) : 0;
+
+                if (diffPct >= 40) {
+                    refuseDialogues = {
+                        "Harganya kemahalan jauh dari pasaran!",
+                        "Terlalu mahal, saya cari toko lain.",
+                        "Harganya di luar budget sama sekali.",
+                        "Gila, mahal banget!"
+                    };
+                } else {
+                    refuseDialogues = {
+                        "Harganya agak mahal.",
+                        "Kayaknya kemahalan sedikit.",
+                        "Aku cari yang lebih murah.",
+                        "Kalau segini aku nggak jadi beli.",
+                        "Hmm... kemahalan deh."
+                    };
+                }
                 Say(refuseDialogues[(id + rollSeed) % refuseDialogues.size()], 3.0f, Color{ 255, 235, 235, 245 }, Color{ 180, 40, 40, 255 });
 
                 if (!penaltyPriceTooHighApplied) {
