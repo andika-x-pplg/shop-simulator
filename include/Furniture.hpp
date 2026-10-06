@@ -26,6 +26,7 @@ struct FurnitureItem {
     int price;
     bool isOwned;
     Vector3 position;
+    float rotationY;           // Stage 22: Free rotation angle in degrees
     Vector3 size;
     Color primaryColor;
     Color secondaryColor;
@@ -55,10 +56,17 @@ public:
 
     // Queries
     const std::vector<FurnitureItem>& GetFurnitureList() const { return furnitureList; }
+    std::vector<FurnitureItem>& GetFurnitureListRef() { return furnitureList; }
     const std::vector<EquipmentItem>& GetEquipmentList() const { return equipmentList; }
     bool IsFurnitureOwned(FurnitureType type) const;
     bool IsFurnitureOwnedById(int id) const;
     void SetFurnitureOwnedById(int id, bool owned);
+
+    // Stage 22: Position & Rotation Layout Management
+    bool SetFurnitureTransform(int id, Vector3 pos, float rotY);
+    const FurnitureItem* GetFurnitureItemById(int id) const;
+    FurnitureItem* GetFurnitureItemById(int id);
+    FurnitureItem* GetTargetedFurniture(Vector3 playerEyePos, Vector3 playerLookDir, float maxDistance = 3.8f);
 
     bool IsEquipmentOwned(EquipmentType type) const;
     void SetFurnitureOwned(FurnitureType type, bool owned) {

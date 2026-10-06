@@ -13,6 +13,7 @@
 #include "RandomEventManager.hpp"
 #include "ShopExpansion.hpp"
 #include "MarketSystem.hpp"
+#include "ShopCustomization.hpp"
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -148,6 +149,7 @@ bool SaveSystem::SaveGame(const std::string& filepath,
                           const RandomEventManager& eventMgr,
                           const ShopExpansion& shopExpansion,
                           const MarketSystem& marketSystem,
+                          const ShopCustomization& shopCustomization,
                           std::string& outMessage)
 {
     EnsureSaveDirectoryExists(filepath);
@@ -428,7 +430,44 @@ bool SaveSystem::SaveGame(const std::string& filepath,
              << (statIdx + 1 < data.productStats.size() ? ",\n" : "\n");
         statIdx++;
     }
-    file << "  ]\n";
+    file << "  ],\n";
+
+    // Stage 22: Shop Customization Data (Styles, Layout, Furniture Transforms, Decorations)
+    auto customSave = shopCustomization.ExportSaveData();
+
+    file << "  \"customization\": {\n";
+    file << "    \"floorStyle\": " << customSave.floorStyle << ",\n";
+    file << "    \"wallStyle\": " << customSave.wallStyle << ",\n";
+    file << "    \"lightTone\": " << customSave.lightTone << ",\n";
+    file << "    \"lightIntensity\": " << std::fixed << std::setprecision(2) << customSave.lightIntensity << ",\n";
+    file << "    \"signboardStyle\": " << customSave.signboardStyle << ",\n";
+    file << "    \"shopName\": \"" << customSave.shopName << "\",\n";
+    file << "    \"furnitureTransforms\": [\n";
+    for (size_t i = 0; i < customSave.furnitureTransforms.size(); ++i) {
+        const auto& ft = customSave.furnitureTransforms[i];
+        file << "      { \"id\": " << ft.id
+             << ", \"x\": " << std::fixed << std::setprecision(2) << ft.posX
+             << ", \"y\": " << ft.posY
+             << ", \"z\": " << ft.posZ
+             << ", \"rot\": " << ft.rotY << " }"
+             << (i + 1 < customSave.furnitureTransforms.size() ? ",\n" : "\n");
+    }
+    file << "    ],\n";
+    file << "    \"decorations\": [\n";
+    for (size_t i = 0; i < customSave.decorEntries.size(); ++i) {
+        const auto& dc = customSave.decorEntries[i];
+        file << "      { \"id\": " << dc.id
+             << ", \"type\": " << dc.typeId
+             << ", \"owned\": " << (dc.isOwned ? "true" : "false")
+             << ", \"placed\": " << (dc.isPlaced ? "true" : "false")
+             << ", \"x\": " << std::fixed << std::setprecision(2) << dc.posX
+             << ", \"y\": " << dc.posY
+             << ", \"z\": " << dc.posZ
+             << ", \"rot\": " << dc.rotY << " }"
+             << (i + 1 < customSave.decorEntries.size() ? ",\n" : "\n");
+    }
+    file << "    ]\n";
+    file << "  }\n";
     file << "}\n";
 
     file.close();
@@ -512,6 +551,7 @@ bool SaveSystem::LoadGame(const std::string& filepath,
                           RandomEventManager& eventMgr,
                           ShopExpansion& shopExpansion,
                           MarketSystem& marketSystem,
+                          ShopCustomization& shopCustomization,
                           std::string& outMessage)
 {
     if (!HasSaveGame(filepath)) {
@@ -841,6 +881,82 @@ bool SaveSystem::LoadGame(const std::string& filepath,
                 objStart = objEnd + 1;
             }
         }
+    }
+
+    // Deserialize Stage 22 Customization (Styles, Layout, Furniture Transforms, Decorations)
+    size_t customPos = content.find("\"customization\": {");
+    if (customPos != std::string::npos) {
+        size_t customEnd = content.find('}', customPos);
+        // Look for end of customization object (after nested arrays)
+        size_t decorArrayPos = content.find("\"decorations\": [", customPos);
+        if (decorArrayPos != std::string::npos) {
+            size_t decorArrayEnd = content.find(']', decorArrayPos);
+            if (decorArrayEnd != std::string::npos) {
+                customEnd = content.find('}', decorArrayEnd);
+            }
+        }
+        if (customEnd == std::string::npos) customEnd = content.length();
+
+        std::string customSection = content.substr(customPos, customEnd - customPos + 1);
+
+        ShopCustomization::CustomizationSaveData customData;
+        customData.floorStyle = ReadInt(customSection, "floorStyle", 0);
+        customData.wallStyle = ReadInt(customSection, "wallStyle", 0);
+        customData.lightTone = ReadInt(customSection, "lightTone", 0);
+        customData.lightIntensity = ReadFloat(customSection, "lightIntensity", 1.0f);
+        customData.signboardStyle = ReadInt(customSection, "signboardStyle", 0);
+        ExtractJsonValue(customSection, "shopName", customData.shopName);
+
+        // Parse furnitureTransforms
+        size_t fTransPos = customSection.find("\"furnitureTransforms\": [");
+        if (fTransPos != std::string::npos) {
+            size_t fTransEnd = customSection.find(']', fTransPos);
+            if (fTransEnd != std::string::npos) {
+                std::string fSec = customSection.substr(fTransPos, fTransEnd - fTransPos);
+                size_t fObj = 0;
+                while ((fObj = fSec.find('{', fObj)) != std::string::npos) {
+                    size_t fObjE = fSec.find('}', fObj);
+                    if (fObjE == std::string::npos) break;
+                    std::string fStr = fSec.substr(fObj, fObjE - fObj + 1);
+                    ShopCustomization::CustomizationSaveData::FurnitureTransformSave ft;
+                    ft.id = ReadInt(fStr, "id", 0);
+                    ft.posX = ReadFloat(fStr, "x", 0.0f);
+                    ft.posY = ReadFloat(fStr, "y", 0.0f);
+                    ft.posZ = ReadFloat(fStr, "z", 0.0f);
+                    ft.rotY = ReadFloat(fStr, "rot", 0.0f);
+                    customData.furnitureTransforms.push_back(ft);
+                    fObj = fObjE + 1;
+                }
+            }
+        }
+
+        // Parse decorations
+        size_t dArrPos = customSection.find("\"decorations\": [");
+        if (dArrPos != std::string::npos) {
+            size_t dArrEnd = customSection.find(']', dArrPos);
+            if (dArrEnd != std::string::npos) {
+                std::string dSec = customSection.substr(dArrPos, dArrEnd - dArrPos);
+                size_t dObj = 0;
+                while ((dObj = dSec.find('{', dObj)) != std::string::npos) {
+                    size_t dObjE = dSec.find('}', dObj);
+                    if (dObjE == std::string::npos) break;
+                    std::string dStr = dSec.substr(dObj, dObjE - dObj + 1);
+                    ShopCustomization::CustomizationSaveData::DecorSaveEntry dc;
+                    dc.id = ReadInt(dStr, "id", 0);
+                    dc.typeId = ReadInt(dStr, "type", 0);
+                    dc.isOwned = ReadBool(dStr, "owned", false);
+                    dc.isPlaced = ReadBool(dStr, "placed", false);
+                    dc.posX = ReadFloat(dStr, "x", 0.0f);
+                    dc.posY = ReadFloat(dStr, "y", 0.0f);
+                    dc.posZ = ReadFloat(dStr, "z", 0.0f);
+                    dc.rotY = ReadFloat(dStr, "rot", 0.0f);
+                    customData.decorEntries.push_back(dc);
+                    dObj = dObjE + 1;
+                }
+            }
+        }
+
+        shopCustomization.ImportSaveData(customData);
     }
 
     outMessage = "Game berhasil dimuat!";

@@ -18,6 +18,7 @@
 #include "RandomEventManager.hpp"
 #include "ShopExpansion.hpp"
 #include "MarketSystem.hpp"
+#include "ShopCustomization.hpp"
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -82,6 +83,10 @@ int main() {
     MarketSystem& marketSystem = MarketSystem::Instance();
     marketSystem.Init();
 
+    // Advanced Shop Customization & Free Placement (Stage 22)
+    ShopCustomization& shopCustom = ShopCustomization::Instance();
+    shopCustom.Init();
+
     // Day & Time System (Tahap 10)
     GameTime gameTime;
     gameTime.Init();
@@ -142,6 +147,7 @@ int main() {
         eventMgr.Init();
         shopExpansion.Init();
         marketSystem.Init();
+        shopCustom.Init();
         gameTime.Init();
         dailyStats.Init();
         player.Init({ 0.0f, 0.0f, 10.0f });
@@ -160,13 +166,19 @@ int main() {
                              finance.IsMenuOpen() || reputation.IsMenuOpen() ||
                              shopUpgrade.IsMenuOpen() || furniture.IsMenuOpen() ||
                              employeeMgr.IsMenuOpen() || eventMgr.IsMenuOpen() ||
-                             shopExpansion.IsMenuOpen() ||
+                             shopExpansion.IsMenuOpen() || marketSystem.IsMenuOpen() ||
+                             shopCustom.IsMenuOpen() ||
                              gameTime.IsDaySummaryOpen() || saveSystem.IsMenuOpen();
 
         // Exit or close modals on ESC (or open Game Menu if in normal play)
         if (IsKeyPressed(KEY_ESCAPE)) {
             audioMgr.PlayEvent(SoundEvent::CLICK);
-            if (saveSystem.IsMenuOpen()) {
+            if (shopCustom.IsEditingPlacement()) {
+                shopCustom.CancelPlacement();
+                topNotice = "Pemindahan objek dibatalkan.";
+                topNoticeColor = { 241, 196, 15, 235 };
+                topNoticeTimer = 2.0f;
+            } else if (saveSystem.IsMenuOpen()) {
                 saveSystem.SetMenuOpen(false);
                 DisableCursor();
             } else if (gameTime.IsDaySummaryOpen()) {
@@ -182,6 +194,8 @@ int main() {
                 employeeMgr.SetMenuOpen(false);
                 eventMgr.SetMenuOpen(false);
                 shopExpansion.SetMenuOpen(false);
+                marketSystem.SetMenuOpen(false);
+                shopCustom.SetMenuOpen(false);
                 DisableCursor();
             } else {
                 // Open Game Menu / Save Modal on ESC during gameplay
@@ -205,7 +219,7 @@ int main() {
             if (gameTime.IsDaySummaryOpen()) {
                 // Trigger Auto-save on day end if closing
                 std::string autoSaveMsg;
-                saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, autoSaveMsg);
+                saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, shopCustom, autoSaveMsg);
                 EnableCursor();
             }
         }
@@ -239,7 +253,7 @@ int main() {
 
                 // Trigger Autosave on new day start
                 std::string autoSaveMsg;
-                saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, autoSaveMsg);
+                saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, shopCustom, autoSaveMsg);
 
                 topNotice = nextDayNotice + " | " + mktNotice;
                 topNoticeColor = nextDayCol;
@@ -279,7 +293,7 @@ int main() {
         // Quick Save (F5)
         if (IsKeyPressed(KEY_F5)) {
             std::string msg;
-            if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, msg)) {
+            if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, shopCustom, msg)) {
                 topNotice = "Quick Save: " + msg;
                 topNoticeColor = { 46, 204, 113, 235 };
                 audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
@@ -293,7 +307,7 @@ int main() {
         // Quick Load (F9)
         if (IsKeyPressed(KEY_F9)) {
             std::string msg;
-            if (saveSystem.LoadGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, msg)) {
+            if (saveSystem.LoadGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, shopCustom, msg)) {
                 customers.clear(); // Despawn active customer safely
                 spawnTimer = 2.0f;
                 topNotice = "Quick Load: " + msg;
@@ -517,6 +531,31 @@ int main() {
                 employeeMgr.SetMenuOpen(false);
                 eventMgr.SetMenuOpen(false);
                 shopExpansion.SetMenuOpen(false);
+                shopCustom.SetMenuOpen(false);
+                gameTime.SetDaySummaryOpen(false);
+                saveSystem.SetMenuOpen(false);
+                EnableCursor();
+            } else {
+                DisableCursor();
+            }
+        }
+
+        // Shop Customization Modal (C) (Stage 22)
+        if (IsKeyPressed(KEY_C)) {
+            audioMgr.PlayEvent(SoundEvent::CLICK);
+            bool nextState = !shopCustom.IsMenuOpen();
+            shopCustom.SetMenuOpen(nextState);
+            if (nextState) {
+                supplier.SetMenuOpen(false);
+                priceMgr.SetMenuOpen(false);
+                finance.SetMenuOpen(false);
+                reputation.SetMenuOpen(false);
+                shopUpgrade.SetMenuOpen(false);
+                furniture.SetMenuOpen(false);
+                employeeMgr.SetMenuOpen(false);
+                eventMgr.SetMenuOpen(false);
+                shopExpansion.SetMenuOpen(false);
+                marketSystem.SetMenuOpen(false);
                 gameTime.SetDaySummaryOpen(false);
                 saveSystem.SetMenuOpen(false);
                 EnableCursor();
@@ -530,6 +569,7 @@ int main() {
                        shopUpgrade.IsMenuOpen() || furniture.IsMenuOpen() ||
                        employeeMgr.IsMenuOpen() || eventMgr.IsMenuOpen() ||
                        shopExpansion.IsMenuOpen() || marketSystem.IsMenuOpen() ||
+                       shopCustom.IsMenuOpen() ||
                        gameTime.IsDaySummaryOpen() || saveSystem.IsMenuOpen();
 
         // -------------------------------------------------------------
@@ -554,7 +594,7 @@ int main() {
                 } else if (action == 1) {
                     // Save Game
                     std::string msg;
-                    if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, msg)) {
+                    if (saveSystem.SaveGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, shopCustom, msg)) {
                         topNotice = msg;
                         topNoticeColor = { 46, 204, 113, 235 };
                         audioMgr.PlayEvent(SoundEvent::NOTIFICATION);
@@ -568,7 +608,7 @@ int main() {
                 } else if (action == 2) {
                     // Load Game
                     std::string msg;
-                    if (saveSystem.LoadGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, msg)) {
+                    if (saveSystem.LoadGame(defaultSaveFile, player, shop, finance, priceMgr, reputation, shopUpgrade, furniture, supplier, gameTime, dailyStats, employeeMgr, eventMgr, shopExpansion, marketSystem, shopCustom, msg)) {
                         customers.clear(); // Safely reset current customers
                         spawnTimer = 2.0f;
                         topNotice = msg;
@@ -1000,6 +1040,124 @@ int main() {
                 audioMgr.PlayEvent(SoundEvent::CLICK);
             }
         }
+        // -------------------------------------------------------------
+        // Shop Customization Modal Inputs (C) (Stage 22)
+        // -------------------------------------------------------------
+        else if (shopCustom.IsMenuOpen()) {
+            if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_LEFT)) {
+                shopCustom.PreviousTab();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+            if (IsKeyPressed(KEY_E) || IsKeyPressed(KEY_RIGHT)) {
+                shopCustom.NextTab();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+            if (IsKeyPressed(KEY_TAB)) {
+                shopCustom.NextTab();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+            if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
+                shopCustom.PreviousItem();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+            if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
+                shopCustom.NextItem();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+
+            // Tab 0: Furniture Layout
+            if (shopCustom.GetCurrentTab() == 0) {
+                if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_R)) {
+                    int sel = shopCustom.GetSelectedIndex();
+                    const auto& fList = furniture.GetFurnitureList();
+                    if (sel >= 0 && sel < (int)fList.size()) {
+                        const auto& fItem = fList[sel];
+                        if (fItem.isOwned) {
+                            shopCustom.SetMenuOpen(false);
+                            DisableCursor();
+                            shopCustom.StartMovingFurniture(fItem.id, fItem.position, fItem.rotationY, fItem.size, fItem.name);
+                            topNotice = "Mode Pindah Objek: [" + fItem.name + "] aktif! Arahkan & Tekan [ENTER/E] untuk Meletakkan.";
+                            topNoticeColor = { 0, 220, 255, 235 };
+                            topNoticeTimer = 4.0f;
+                            audioMgr.PlayEvent(SoundEvent::CLICK);
+                        } else {
+                            player.SetFeedbackMessage("Beli furniture ini terlebih dahulu di menu Beli (B)!", 2.5f);
+                            audioMgr.PlayEvent(SoundEvent::CLICK);
+                        }
+                    }
+                }
+            }
+            // Tab 1: Decorations
+            else if (shopCustom.GetCurrentTab() == 1) {
+                if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                    int sel = shopCustom.GetSelectedIndex();
+                    std::string fb;
+                    if (shopCustom.PurchaseDecoration(sel, finance, fb)) {
+                        topNotice = fb;
+                        topNoticeColor = { 46, 204, 113, 235 };
+                        topNoticeTimer = 3.5f;
+                        audioMgr.PlayEvent(SoundEvent::UPGRADE);
+                    } else {
+                        player.SetFeedbackMessage(fb, 2.5f);
+                        audioMgr.PlayEvent(SoundEvent::CLICK);
+                    }
+                } else if (IsKeyPressed(KEY_R)) {
+                    int sel = shopCustom.GetSelectedIndex();
+                    const auto& dList = shopCustom.GetDecorations();
+                    if (sel >= 0 && sel < (int)dList.size()) {
+                        const auto& dItem = dList[sel];
+                        if (dItem.isOwned) {
+                            shopCustom.SetMenuOpen(false);
+                            DisableCursor();
+                            shopCustom.StartMovingDecoration(dItem.id, dItem.position, dItem.rotationY, dItem.size, dItem.name);
+                            topNotice = "Mode Pindah Dekorasi: [" + dItem.name + "] aktif! Tekan [ENTER/E] untuk Meletakkan.";
+                            topNoticeColor = { 0, 220, 255, 235 };
+                            topNoticeTimer = 4.0f;
+                            audioMgr.PlayEvent(SoundEvent::CLICK);
+                        } else {
+                            player.SetFeedbackMessage("Beli dekorasi ini terlebih dahulu!", 2.0f);
+                        }
+                    }
+                }
+            }
+            // Tab 2: Floor & Wall Customization
+            else if (shopCustom.GetCurrentTab() == 2) {
+                if (IsKeyPressed(KEY_ONE))   { shopCustom.SetFloorStyle(FloorStyle::BASIC_TILE); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_TWO))   { shopCustom.SetFloorStyle(FloorStyle::WOOD_PARQUET); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_THREE)) { shopCustom.SetFloorStyle(FloorStyle::CHECKERED_RETRO); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_FOUR))  { shopCustom.SetFloorStyle(FloorStyle::MARBLE_LUXURY); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_FIVE))  { shopCustom.SetFloorStyle(FloorStyle::MODERN_CONCRETE); audioMgr.PlayEvent(SoundEvent::CLICK); }
+
+                if (IsKeyPressed(KEY_SIX))   { shopCustom.SetWallStyle(WallStyle::BASIC_WHITE); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_SEVEN)) { shopCustom.SetWallStyle(WallStyle::PAINTED_PASTEL); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_EIGHT)) { shopCustom.SetWallStyle(WallStyle::BRICK_EXPOSED); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_NINE))  { shopCustom.SetWallStyle(WallStyle::MODERN_PANEL); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_ZERO))  { shopCustom.SetWallStyle(WallStyle::PREMIUM_WALLPAPER); audioMgr.PlayEvent(SoundEvent::CLICK); }
+            }
+            // Tab 3: Lighting Customization
+            else if (shopCustom.GetCurrentTab() == 3) {
+                if (IsKeyPressed(KEY_ONE))   { shopCustom.SetLightTone(LightTone::WARM_WHITE); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_TWO))   { shopCustom.SetLightTone(LightTone::NATURAL_DAYLIGHT); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_THREE)) { shopCustom.SetLightTone(LightTone::COOL_SUPERMARKET); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_FOUR))  { shopCustom.SetLightTone(LightTone::CYBER_NEON); audioMgr.PlayEvent(SoundEvent::CLICK); }
+
+                if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) {
+                    shopCustom.SetLightIntensity(shopCustom.GetLightIntensity() - 0.1f);
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+                if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) {
+                    shopCustom.SetLightIntensity(shopCustom.GetLightIntensity() + 0.1f);
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+            }
+            // Tab 4: Signboard Customization
+            else if (shopCustom.GetCurrentTab() == 4) {
+                if (IsKeyPressed(KEY_ONE))   { shopCustom.SetSignboardStyle(SignboardStyle::MINIMALIST_WOOD); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_TWO))   { shopCustom.SetSignboardStyle(SignboardStyle::NEON_GLOW); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_THREE)) { shopCustom.SetSignboardStyle(SignboardStyle::MODERN_LED); audioMgr.PlayEvent(SoundEvent::CLICK); }
+                if (IsKeyPressed(KEY_FOUR))  { shopCustom.SetSignboardStyle(SignboardStyle::VINTAGE_RETRO); audioMgr.PlayEvent(SoundEvent::CLICK); }
+            }
+        }
 
         // Update Top Notification Timer
         if (topNoticeTimer > 0.0f) {
@@ -1110,6 +1268,87 @@ int main() {
                         }
                     } else {
                         player.SetFeedbackMessage("Produk tidak sesuai dengan rak! (Rak ini untuk " + targetedRack->GetProductName() + ")", 2.0f);
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // STAGE 22: Free Placement Mode Updates & Controls
+        // ==========================================
+        if (shopCustom.IsEditingPlacement()) {
+            // Update placement raycast onto ground plane
+            shopCustom.UpdatePlacementMovement(player.GetEyePosition(), player.GetLookDirection(), shop.GetShopWidth(), shop.GetShopLength());
+
+            // Rotation with [Q] (Left) and [E] (Right)
+            if (IsKeyPressed(KEY_Q)) {
+                shopCustom.RotateHeldObject(-45.0f);
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+            if (IsKeyPressed(KEY_E)) {
+                shopCustom.RotateHeldObject(45.0f);
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+
+            // Grid snapping toggle with [G]
+            if (IsKeyPressed(KEY_G)) {
+                shopCustom.ToggleGridSnap();
+                std::string snapInfo = shopCustom.IsGridSnapEnabled() ? (std::string("Grid Snap: AKTIF (") + TextFormat("%.2fm", shopCustom.GetGridSize()) + ")") : "Grid Snap: BEBAS (Free Placement)";
+                topNotice = snapInfo;
+                topNoticeColor = { 0, 200, 255, 235 };
+                topNoticeTimer = 2.0f;
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+
+            // Confirm Placement with [ENTER] or [SPACE]
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+                Vector3 newPos;
+                float newRot;
+                std::string fb;
+                int fId = shopCustom.GetHeldFurnitureId();
+                if (shopCustom.ConfirmPlacement(newPos, newRot, fb)) {
+                    if (fId > 0) {
+                        furniture.SetFurnitureTransform(fId, newPos, newRot);
+                    }
+                    topNotice = fb;
+                    topNoticeColor = { 46, 204, 113, 235 };
+                    topNoticeTimer = 3.5f;
+                    audioMgr.PlayEvent(SoundEvent::PUTDOWN);
+                } else {
+                    player.SetFeedbackMessage(fb, 2.5f);
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                }
+            }
+        } else {
+            // Grab/Relocate targeted furniture or decoration with [R] key
+            FurnitureItem* targetedFurn = furniture.GetTargetedFurniture(player.GetEyePosition(), player.GetLookDirection(), 3.8f);
+            if (IsKeyPressed(KEY_R) && !anyModalOpen) {
+                if (targetedFurn != nullptr && targetedFurn->isOwned) {
+                    shopCustom.StartMovingFurniture(targetedFurn->id, targetedFurn->position, targetedFurn->rotationY, targetedFurn->size, targetedFurn->name);
+                    topNotice = "Memindahkan: [" + targetedFurn->name + "] - Arahkan mouse & [ENTER/SPACE] untuk Meletakkan.";
+                    topNoticeColor = { 0, 220, 255, 235 };
+                    topNoticeTimer = 4.0f;
+                    audioMgr.PlayEvent(SoundEvent::CLICK);
+                } else {
+                    // Check if aiming at any owned placed decoration
+                    auto& decors = shopCustom.GetDecorationsRef();
+                    bool foundDecor = false;
+                    for (auto& d : decors) {
+                        if (d.isOwned && d.isPlaced) {
+                            float dist = Vector3Distance(player.GetPosition(), d.position);
+                            if (dist < 3.8f) {
+                                shopCustom.StartMovingDecoration(d.id, d.position, d.rotationY, d.size, d.name);
+                                topNotice = "Memindahkan: [" + d.name + "] - Arahkan mouse & [ENTER/SPACE] untuk Meletakkan.";
+                                topNoticeColor = { 0, 220, 255, 235 };
+                                topNoticeTimer = 4.0f;
+                                audioMgr.PlayEvent(SoundEvent::CLICK);
+                                foundDecor = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!foundDecor && targetedFurn == nullptr) {
+                        player.SetFeedbackMessage("Bidik furniture atau dekorasi untuk memindahkan dengan [R], atau buka menu [C]", 2.5f);
                     }
                 }
             }
@@ -1272,7 +1511,9 @@ int main() {
             // 3D Rendering Mode
             BeginMode3D(player.GetCamera());
                 shop.Render();
-                furniture.Render(); // 3D Furniture & Decorations
+                furniture.Render(); // 3D Furniture & Equipment
+                shopCustom.RenderDecorations(); // 3D Interior & Wall Decorations (Stage 22)
+                shopCustom.RenderPlacementPreview(shop.GetShopWidth(), shop.GetShopLength()); // 3D Placement Ghost Preview (Stage 22)
                 employeeMgr.Render3D(); // 3D Employees (Stage 16 & 17)
                 for (auto& cust : customers) {
                     cust.Render();
@@ -1288,10 +1529,10 @@ int main() {
 
             // 2D HUD / UI Rendering
             // Top-Left Controls & Status Box (Sized to fit all status & control text)
-            DrawRectangle(15, 15, 395, 500, { 15, 20, 25, 230 });
-            DrawRectangleLines(15, 15, 395, 500, { 70, 85, 100, 255 });
+            DrawRectangle(15, 15, 410, 530, { 15, 20, 25, 230 });
+            DrawRectangleLines(15, 15, 410, 530, { 70, 85, 100, 255 });
 
-            DrawText("SHOP SIMULATOR 3D (Final Release)", 25, 23, 16, { 255, 215, 0, 255 });
+            DrawText("SHOP SIMULATOR 3D (Stage 22 Customization)", 25, 23, 16, { 255, 215, 0, 255 });
             
             // Time & Shop Open/Closed Banner (Tahap 10)
             std::string timeHud = gameTime.GetDayString() + "  |  " + gameTime.GetFormattedTime();
@@ -1304,28 +1545,29 @@ int main() {
 
             DrawText("WASD     : Bergerak", 25, 79, 12, RAYWHITE);
             DrawText("Mouse    : Kontrol Kamera", 25, 95, 12, RAYWHITE);
-            DrawText("E        : Interaksi Rak / Storage", 25, 111, 12, { 100, 230, 100, 255 });
-            DrawText("M / ESC  : Game Menu & Save/Load", 25, 127, 12, { 255, 215, 0, 255 });
-            DrawText("F5 / F9  : Quick Save / Quick Load", 25, 143, 12, { 100, 220, 255, 255 });
-            DrawText("TAB      : Menu Supplier & Order", 25, 159, 12, { 255, 180, 50, 255 });
-            DrawText("J        : Pasar & Kompetisi Toko (Stage 21)", 25, 175, 12, { 46, 204, 113, 255 });
-            DrawText("P        : Manajemen Harga Jual", 25, 191, 12, { 100, 200, 255, 255 });
-            DrawText("K        : Manajemen Karyawan (Stage 16-17)", 25, 207, 12, { 0, 230, 200, 255 });
-            DrawText("L        : Event Acak & Tantangan (Stage 18)", 25, 223, 12, { 241, 196, 15, 255 });
-            DrawText("X        : Perluasan Toko 3D (Shop Expansion)", 25, 239, 12, { 46, 204, 113, 255 });
-            DrawText("F        : Ringkasan Keuangan Toko", 25, 255, 12, { 255, 220, 80, 255 });
-            DrawText("R        : Reputasi & Rating Toko", 25, 271, 12, { 241, 196, 15, 255 });
-            DrawText("U        : Upgrade Toko (Shop Upgrade)", 25, 287, 12, { 52, 152, 219, 255 });
-            DrawText("B        : Beli Furniture & Equipment", 25, 303, 12, { 230, 126, 34, 255 });
+            DrawText("E        : Interaksi Rak / Storage / Tempatkan Objek", 25, 111, 12, { 100, 230, 100, 255 });
+            DrawText("C        : Kustomisasi Toko & Layout (Stage 22)", 25, 127, 12, { 0, 220, 255, 255 });
+            DrawText("R        : Relokasi / Pindahkan Objek yang Dibidik", 25, 143, 12, { 255, 180, 50, 255 });
+            DrawText("M / ESC  : Game Menu & Save/Load", 25, 159, 12, { 255, 215, 0, 255 });
+            DrawText("F5 / F9  : Quick Save / Quick Load", 25, 175, 12, { 100, 220, 255, 255 });
+            DrawText("TAB      : Menu Supplier & Order", 25, 191, 12, { 255, 180, 50, 255 });
+            DrawText("J        : Pasar & Kompetisi Toko (Stage 21)", 25, 207, 12, { 46, 204, 113, 255 });
+            DrawText("P        : Manajemen Harga Jual", 25, 223, 12, { 100, 200, 255, 255 });
+            DrawText("K        : Manajemen Karyawan (Stage 16-17)", 25, 239, 12, { 0, 230, 200, 255 });
+            DrawText("L        : Event Acak & Tantangan (Stage 18)", 25, 255, 12, { 241, 196, 15, 255 });
+            DrawText("X        : Perluasan Toko 3D (Shop Expansion)", 25, 271, 12, { 46, 204, 113, 255 });
+            DrawText("F        : Ringkasan Keuangan Toko", 25, 287, 12, { 255, 220, 80, 255 });
+            DrawText("U        : Upgrade Toko (Shop Upgrade)", 25, 303, 12, { 52, 152, 219, 255 });
+            DrawText("B        : Beli Furniture & Equipment", 25, 319, 12, { 230, 126, 34, 255 });
 
             // Carried Product Status
             std::string carriedText = "Membawa: " + player.GetHeldProductName();
             Color carriedColor = player.IsHoldingProduct() ? Color{ 255, 220, 50, 255 } : Color{ 180, 190, 200, 255 };
-            DrawText(carriedText.c_str(), 25, 323, 13, carriedColor);
+            DrawText(carriedText.c_str(), 25, 339, 13, carriedColor);
 
             // Treasury / Money Balance & Levels HUD
             std::string moneyText = "Uang Toko: Rp" + std::to_string(finance.GetCurrentBalance());
-            DrawText(moneyText.c_str(), 25, 341, 15, { 50, 255, 120, 255 });
+            DrawText(moneyText.c_str(), 25, 357, 15, { 50, 255, 120, 255 });
 
             // Shop & Upgrade Levels Summary on HUD
             std::string levelSummary = "Toko: Lvl " + std::to_string(shopUpgrade.GetShopSizeLevel()) +
@@ -1333,7 +1575,7 @@ int main() {
                                         " | Rak: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::SHELF_CAPACITY)) +
                                         " | Gudang: Lvl " + std::to_string(shopUpgrade.GetLevel(UpgradeType::STORAGE_CAPACITY)) +
                                         " | Staf: " + std::to_string(employeeMgr.GetActiveEmployeeCount()) + "/" + std::to_string(employeeMgr.GetMaxEmployeeCapacity(shopUpgrade.GetShopSizeLevel()));
-            DrawText(levelSummary.c_str(), 25, 361, 12, { 100, 220, 255, 255 });
+            DrawText(levelSummary.c_str(), 25, 377, 12, { 100, 220, 255, 255 });
 
             // Rating, Reputation, Cleanliness on HUD
             std::string repHudText = "";
@@ -1345,12 +1587,16 @@ int main() {
                 repHudText = "Rating: - | Rep: " + std::to_string(reputation.GetReputation()) + "/100" +
                              " | Bersih: " + std::to_string(employeeMgr.GetCleanliness()) + "%";
             }
-            DrawText(repHudText.c_str(), 25, 379, 12, { 255, 215, 0, 255 });
+            DrawText(repHudText.c_str(), 25, 395, 12, { 255, 215, 0, 255 });
 
             // Storage Stock Summary
             std::string storageInfo = "Storage: Total " + std::to_string(shop.GetStorage().GetTotalStock()) +
                                       " / " + std::to_string(shop.GetStorage().GetMaxCapacity()) + " unit (TAB: Pengadaan)";
-            DrawText(storageInfo.c_str(), 25, 397, 12, { 255, 200, 120, 255 });
+            DrawText(storageInfo.c_str(), 25, 413, 12, { 255, 200, 120, 255 });
+
+            // Layout & Style Status
+            std::string customSummary = "Lantai: " + GetFloorStyleName(shopCustom.GetFloorStyle()) + " | Dinding: " + GetWallStyleName(shopCustom.GetWallStyle());
+            DrawText(customSummary.c_str(), 25, 431, 11, { 180, 210, 230, 255 });
 
             // Customer / Cashier Status Debug & Event info
             std::string custCountText = "Customer: " + std::to_string(customers.size()) + "/" + std::to_string(maxCustCapacity) +
@@ -1548,6 +1794,13 @@ int main() {
             // ==========================================
             if (marketSystem.IsMenuOpen()) {
                 marketSystem.RenderUI(screenWidth, screenHeight, finance.GetCurrentBalance(), gameTime.GetCurrentDay(), reputation.GetReputation());
+            }
+
+            // ==========================================
+            // SHOP CUSTOMIZATION & LAYOUT MODAL (C) (Stage 22)
+            // ==========================================
+            if (shopCustom.IsMenuOpen()) {
+                shopCustom.RenderUI(screenWidth, screenHeight, finance.GetCurrentBalance());
             }
 
             // ==========================================

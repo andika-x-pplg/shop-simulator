@@ -44,6 +44,7 @@ set(SOURCES
     src/RandomEventManager.cpp
     src/ShopExpansion.cpp
     src/MarketSystem.cpp
+    src/ShopCustomization.cpp
 )
 
 # Header files for IDE navigation
@@ -71,6 +72,7 @@ set(HEADERS
     include/RandomEventManager.hpp
     include/ShopExpansion.hpp
     include/MarketSystem.hpp
+    include/ShopCustomization.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

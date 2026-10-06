@@ -19,7 +19,7 @@ void Furniture::Init() {
     // 1. Table (Meja Display Kayu) - Predefined spot in left-back lounge
     furnitureList.push_back({
         1, "Meja Kayu Santai (Table)", FurnitureType::TABLE, 50000, false,
-        { -7.2f, 0.45f, -7.5f }, { 1.8f, 0.9f, 1.4f },
+        { -7.2f, 0.45f, -7.5f }, 0.0f, { 1.8f, 0.9f, 1.4f },
         { 139, 90, 43, 255 }, { 160, 110, 60, 255 },
         "Meja kayu estetik untuk mempercantik pojok toko", 0
     });
@@ -27,7 +27,7 @@ void Furniture::Init() {
     // 2. Chair (Kursi Tunggu Pelanggan) - Predefined spot near table
     furnitureList.push_back({
         2, "Kursi Tunggu (Chair)", FurnitureType::CHAIR, 30000, false,
-        { -7.2f, 0.45f, -5.8f }, { 0.8f, 0.9f, 0.8f },
+        { -7.2f, 0.45f, -5.8f }, 0.0f, { 0.8f, 0.9f, 0.8f },
         { 100, 60, 30, 255 }, { 180, 50, 50, 255 },
         "Kursi santai bagi pelanggan yang berkunjung", 0
     });
@@ -35,7 +35,7 @@ void Furniture::Init() {
     // 3. Display Shelf (Rak Display Showcase Premium) - Predefined spot in right wall
     furnitureList.push_back({
         3, "Rak Showcase (Display Shelf)", FurnitureType::DISPLAY_SHELF, 100000, false,
-        { 7.2f, 1.2f, 3.5f }, { 1.6f, 2.4f, 3.2f },
+        { 7.2f, 1.2f, 3.5f }, 0.0f, { 1.6f, 2.4f, 3.2f },
         { 45, 52, 60, 255 }, { 218, 165, 32, 255 },
         "Rak pajangan premium berornamen emas modern", 0
     });
@@ -43,7 +43,7 @@ void Furniture::Init() {
     // 4. Cabinet (Lemari Arsip Toko) - Predefined spot behind cashier
     furnitureList.push_back({
         4, "Lemari Arsip (Cabinet)", FurnitureType::CABINET, 150000, false,
-        { 7.5f, 1.25f, 9.8f }, { 1.6f, 2.5f, 1.2f },
+        { 7.5f, 1.25f, 9.8f }, 0.0f, { 1.6f, 2.5f, 1.2f },
         { 70, 75, 85, 255 }, { 200, 205, 215, 255 },
         "Lemari kabinet dokumen toko & perlengkapan kasir", 0
     });
@@ -51,7 +51,7 @@ void Furniture::Init() {
     // 5. Decoration Plant (Tanaman Hias Toko) - Predefined spot at shop entrance lobby
     furnitureList.push_back({
         5, "Tanaman Hias (Decoration Plant)", FurnitureType::DECORATION_PLANT, 25000, false,
-        { -2.8f, 0.6f, 10.5f }, { 0.8f, 1.2f, 0.8f },
+        { -2.8f, 0.6f, 10.5f }, 0.0f, { 0.8f, 1.2f, 0.8f },
         { 120, 70, 40, 255 }, { 34, 139, 34, 255 },
         "Pot tanaman indoor hijau segar di dekat pintu masuk", 0
     });
@@ -60,7 +60,7 @@ void Furniture::Init() {
     // 6. Right Wing Showcase (Tier 1 Expansion)
     furnitureList.push_back({
         6, "Showcase Sayap Kanan (Right Showcase)", FurnitureType::DISPLAY_SHELF, 85000, false,
-        { 11.2f, 1.2f, -1.0f }, { 1.5f, 2.4f, 3.0f },
+        { 11.2f, 1.2f, -1.0f }, 0.0f, { 1.5f, 2.4f, 3.0f },
         { 50, 60, 75, 255 }, { 241, 196, 15, 255 },
         "Rak display mewah di sayap kanan area toko yang diperluas", 1
     });
@@ -68,7 +68,7 @@ void Furniture::Init() {
     // 7. Right Wing Plant (Tier 1 Expansion)
     furnitureList.push_back({
         7, "Tanaman Hias Kanan (Right Wing Plant)", FurnitureType::DECORATION_PLANT, 30000, false,
-        { 11.2f, 0.6f, 8.5f }, { 0.8f, 1.2f, 0.8f },
+        { 11.2f, 0.6f, 8.5f }, 0.0f, { 0.8f, 1.2f, 0.8f },
         { 120, 70, 40, 255 }, { 46, 204, 113, 255 },
         "Tanaman hias indoor estetik untuk menyegarkan area perluasan kanan", 1
     });
@@ -76,7 +76,7 @@ void Furniture::Init() {
     // 8. Back Lounge Table (Tier 2 Expansion)
     furnitureList.push_back({
         8, "Meja Santai Belakang (Back Lounge Table)", FurnitureType::TABLE, 65000, false,
-        { -8.5f, 0.45f, -12.0f }, { 2.0f, 0.9f, 1.4f },
+        { -8.5f, 0.45f, -12.0f }, 0.0f, { 2.0f, 0.9f, 1.4f },
         { 130, 80, 35, 255 }, { 170, 120, 70, 255 },
         "Meja lounge santai di area perluasan belakang toko", 2
     });
@@ -84,7 +84,7 @@ void Furniture::Init() {
     // 9. Back Lounge Chair (Tier 2 Expansion)
     furnitureList.push_back({
         9, "Kursi Santai Belakang (Back Lounge Chair)", FurnitureType::CHAIR, 35000, false,
-        { -8.5f, 0.45f, -10.5f }, { 0.8f, 0.9f, 0.8f },
+        { -8.5f, 0.45f, -10.5f }, 0.0f, { 0.8f, 0.9f, 0.8f },
         { 90, 50, 25, 255 }, { 200, 60, 60, 255 },
         "Kursi nyaman di area belakang toko untuk kenyamanan customer", 2
     });
@@ -92,7 +92,7 @@ void Furniture::Init() {
     // 10. Grand Hall Archive Cabinet (Tier 3 Expansion)
     furnitureList.push_back({
         10, "Kabinet Grand Hall (Grand Cabinet)", FurnitureType::CABINET, 180000, false,
-        { 13.5f, 1.25f, -10.0f }, { 1.8f, 2.5f, 1.2f },
+        { 13.5f, 1.25f, -10.0f }, 0.0f, { 1.8f, 2.5f, 1.2f },
         { 60, 65, 80, 255 }, { 220, 225, 235, 255 },
         "Kabinet penyimpanan berkas & dekorasi eksklusif di Grand Hall", 3
     });
@@ -138,6 +138,61 @@ void Furniture::SetFurnitureOwnedById(int id, bool owned) {
             return;
         }
     }
+}
+
+bool Furniture::SetFurnitureTransform(int id, Vector3 pos, float rotY) {
+    for (auto& item : furnitureList) {
+        if (item.id == id) {
+            item.position = pos;
+            item.rotationY = rotY;
+            return true;
+        }
+    }
+    return false;
+}
+
+const FurnitureItem* Furniture::GetFurnitureItemById(int id) const {
+    for (const auto& item : furnitureList) {
+        if (item.id == id) return &item;
+    }
+    return nullptr;
+}
+
+FurnitureItem* Furniture::GetFurnitureItemById(int id) {
+    for (auto& item : furnitureList) {
+        if (item.id == id) return &item;
+    }
+    return nullptr;
+}
+
+FurnitureItem* Furniture::GetTargetedFurniture(Vector3 playerEyePos, Vector3 playerLookDir, float maxDistance) {
+    FurnitureItem* bestItem = nullptr;
+    float closestDist = maxDistance + 1.0f;
+
+    for (auto& item : furnitureList) {
+        if (!item.isOwned) continue;
+
+        // Bounding box for raycast check
+        AABB box;
+        box.min = { item.position.x - item.size.x / 2.0f, 0.0f, item.position.z - item.size.z / 2.0f };
+        box.max = { item.position.x + item.size.x / 2.0f, item.position.y + item.size.y / 2.0f, item.position.z + item.size.z / 2.0f };
+
+        // Expand bounds slightly for responsive targeting
+        box.min.x -= 0.15f; box.min.z -= 0.15f;
+        box.max.x += 0.15f; box.max.z += 0.15f;
+
+        Ray ray;
+        ray.position = playerEyePos;
+        ray.direction = playerLookDir;
+
+        RayCollision hit = GetRayCollisionBox(ray, BoundingBox{ box.min, box.max });
+        if (hit.hit && hit.distance <= maxDistance && hit.distance < closestDist) {
+            closestDist = hit.distance;
+            bestItem = &item;
+        }
+    }
+
+    return bestItem;
 }
 
 bool Furniture::IsEquipmentOwned(EquipmentType type) const {

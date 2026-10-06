@@ -1,4 +1,5 @@
 #include "Shop.hpp"
+#include "ShopCustomization.hpp"
 #include <algorithm>
 
 Shop::Shop()
@@ -71,8 +72,8 @@ void Shop::BuildStructure() {
     float halfL = shopLength / 2.0f;
     float wallThickness = 0.5f;
 
-    Color wallColor = { 220, 225, 230, 255 };      // Soft light gray/white interior
-    Color backWallColor = { 200, 210, 220, 255 };
+    Color wallColor = ShopCustomization::Instance().GetWallPrimaryColor();
+    Color backWallColor = ShopCustomization::Instance().GetWallSecondaryColor();
 
     // North Wall (Back)
     walls.push_back({ { 0.0f, shopHeight / 2.0f, -halfL }, { shopWidth, shopHeight, wallThickness }, backWallColor });
@@ -266,7 +267,11 @@ Rack* Shop::GetTargetedRack(Vector3 playerEyePos, Vector3 playerLookDir, float m
 void Shop::Render() {
     // Floor
     DrawPlane({ 0.0f, 0.0f, 0.0f }, { shopWidth + 8.0f, shopLength + 8.0f }, { 190, 195, 190, 255 }); // Outside grass/ground
-    DrawCube({ 0.0f, -0.05f, 0.0f }, shopWidth, 0.1f, shopLength, { 245, 245, 250, 255 }); // Shop clean tile floor
+    Color floorCol = ShopCustomization::Instance().GetFloorPrimaryColor();
+    Color gridCol = ShopCustomization::Instance().GetFloorGridColor();
+    Color lightCol = ShopCustomization::Instance().GetCeilingLightColor();
+
+    DrawCube({ 0.0f, -0.05f, 0.0f }, shopWidth, 0.1f, shopLength, floorCol); // Customizable floor
     DrawGrid((int)(shopLength / 2), 2.0f); // Tile grid lines
 
     // Highlight Expansion Zones on floor when unlocked
@@ -290,16 +295,16 @@ void Shop::Render() {
     float lightSpacing = 6.0f;
     for (float z = -shopLength / 2.0f + 4.0f; z < shopLength / 2.0f - 2.0f; z += lightSpacing) {
         // Left light panel
-        DrawCube({ -4.5f, shopHeight - 0.08f, z }, 1.2f, 0.12f, 2.8f, { 255, 255, 240, 255 });
+        DrawCube({ -4.5f, shopHeight - 0.08f, z }, 1.2f, 0.12f, 2.8f, lightCol);
         DrawCubeWires({ -4.5f, shopHeight - 0.08f, z }, 1.2f, 0.12f, 2.8f, { 200, 200, 180, 255 });
 
         // Right light panel
-        DrawCube({ 4.5f, shopHeight - 0.08f, z }, 1.2f, 0.12f, 2.8f, { 255, 255, 240, 255 });
+        DrawCube({ 4.5f, shopHeight - 0.08f, z }, 1.2f, 0.12f, 2.8f, lightCol);
         DrawCubeWires({ 4.5f, shopHeight - 0.08f, z }, 1.2f, 0.12f, 2.8f, { 200, 200, 180, 255 });
 
         // Extra Right Wing Light Panels if expanded
         if (shopWidth >= 25.0f) {
-            DrawCube({ 9.5f, shopHeight - 0.08f, z }, 1.2f, 0.12f, 2.8f, { 255, 255, 240, 255 });
+            DrawCube({ 9.5f, shopHeight - 0.08f, z }, 1.2f, 0.12f, 2.8f, lightCol);
             DrawCubeWires({ 9.5f, shopHeight - 0.08f, z }, 1.2f, 0.12f, 2.8f, { 200, 200, 180, 255 });
         }
     }
@@ -332,4 +337,7 @@ void Shop::Render() {
     for (auto& r : racks) {
         r.Render();
     }
+
+    // Render 3D Storefront Signboard
+    ShopCustomization::Instance().RenderSignboard(shopWidth, shopLength, shopHeight);
 }

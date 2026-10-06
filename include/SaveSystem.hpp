@@ -19,6 +19,7 @@ class EmployeeManager;
 class RandomEventManager;
 class ShopExpansion;
 class MarketSystem;
+class ShopCustomization;
 
 struct MarketSaveData {
     int productType;
@@ -202,6 +203,7 @@ public:
                   const RandomEventManager& eventMgr,
                   const ShopExpansion& shopExpansion,
                   const MarketSystem& marketSystem,
+                  const ShopCustomization& shopCustomization,
                   std::string& outMessage);
 
     bool LoadGame(const std::string& filepath,
@@ -219,6 +221,7 @@ public:
                   RandomEventManager& eventMgr,
                   ShopExpansion& shopExpansion,
                   MarketSystem& marketSystem,
+                  ShopCustomization& shopCustomization,
                   std::string& outMessage);
 
     bool HasSaveGame(const std::string& filepath) const;
