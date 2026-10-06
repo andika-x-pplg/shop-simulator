@@ -374,7 +374,7 @@ void Customer::ApplySeparation(const std::vector<Customer>& otherCustomers, floa
     }
 }
 
-void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidPay, int& outPaidAmount, std::string& outPaidProductSummary) {
+void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidPay, int& outPaidAmount, std::string& outPaidProductSummary, int playerReputation) {
     outDidPay = false;
     outPaidAmount = 0;
     outPaidProductSummary = "";
@@ -516,7 +516,7 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
         }
     }
     // -------------------------------------------------------------
-    // State 5: AT_SHELF (Dynamic Probabilistic Price Decision System)
+    // State 5: AT_SHELF (Stage 21: Competitor & Market-Aware Decision System)
     // -------------------------------------------------------------
     else if (state == CustomerState::AT_SHELF) {
         if (speechBubbleTimer > 0.0f) speechBubbleTimer -= deltaTime;
@@ -525,13 +525,12 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
         waitTimer += deltaTime;
 
         if (waitTimer >= maxWaitDuration) {
-            // Stage 20: Evaluate price dynamically against MarketSystem & Demand
             int curPrice = PriceManager::Instance().GetSellPrice(currentTargetProduct);
-            int mktPrice = MarketSystem::Instance().GetCurrentMarketPrice(currentTargetProduct);
+            int avgCompPrice = MarketSystem::Instance().GetAverageMarketPrice(currentTargetProduct);
             int custTypeInt = static_cast<int>(type);
 
-            // Compute buy chance using MarketSystem formula (accounts for persona & demand)
-            float buyChance = MarketSystem::Instance().EvaluateCustomerBuyChance(currentTargetProduct, curPrice, custTypeInt, 0.95f);
+            // Compute buy chance using Stage 21 MarketSystem formula (accounts for competitor pricing, reputation, persona, demand)
+            float buyChance = MarketSystem::Instance().EvaluateCustomerBuyChance(currentTargetProduct, curPrice, custTypeInt, 0.95f, playerReputation);
 
             // Pseudo-random roll using customer id, item index, price, and time
             int rollSeed = (id * 37 + (int)currentShoppingItemIndex * 19 + curPrice + (int)(GetTime() * 10.0f)) % 100;
@@ -541,29 +540,36 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
                 // DECISION: BUY
                 state = CustomerState::TAKING_PRODUCT;
 
-                // Dynamic contextual buying dialogue (Market, Trend, Demand aware)
+                // Dynamic contextual buying dialogue (Market, Competitor comparison, Demand aware)
                 std::vector<std::string> buyDialogues;
-                int diffPct = (mktPrice > 0) ? ((curPrice - mktPrice) * 100 / mktPrice) : 0;
+                int diffPct = (avgCompPrice > 0) ? ((curPrice - avgCompPrice) * 100 / avgCompPrice) : 0;
                 int demandVal = MarketSystem::Instance().GetDemand(currentTargetProduct);
 
                 if (diffPct <= -10) {
                     buyDialogues = {
-                        "Harganya murah banget di sini!",
-                        "Diskonnya bagus, langsung beli.",
-                        "Murah dibanding toko lain.",
-                        "Untung dapat harga murah!"
+                        "Harganya lebih murah dari toko sebelah!",
+                        "Diskonnya mantap dibanding kompetitor!",
+                        "Wah, jauh lebih hemat belanja di sini.",
+                        "Untung dapat harga miring!"
                     };
                 } else if (demandVal >= 75) {
                     buyDialogues = {
-                        "Produk ini lagi banyak dicari!",
-                        "Untung barang ini masih ada stok.",
-                        "Ini barang yang lagi tren.",
+                        "Produk ini lagi banyak dicari di pasaran!",
+                        "Untung barang ini masih ada stok di sini.",
+                        "Ini barang yang lagi tren pasar.",
                         "Oke, aku ambil produk ini."
+                    };
+                } else if (playerReputation >= 80 && diffPct > 10) {
+                    buyDialogues = {
+                        "Agak mahal sedikit, tapi toko ini sangat terpercaya!",
+                        "Pelayanan di sini bagus, sepadan dengan harganya.",
+                        "Langganan di sini memang selalu nyaman.",
+                        "Oke, beli di sini saja."
                     };
                 } else {
                     buyDialogues = {
                         "Oke, aku ambil.",
-                        "Harganya masih wajar dan masuk akal.",
+                        "Harganya masih wajar dan bersaing.",
                         "Kayaknya cocok, beli satu.",
                         "Ini masuk keranjang.",
                         "Bagus, harganya pas."
@@ -578,16 +584,23 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
                     satisfaction = std::max(20, satisfaction - 5);
                 }
             } else {
-                // DECISION: REFUSE (Too expensive / above market / low value)
+                // DECISION: REFUSE (Too expensive compared to competitors / market)
                 std::vector<std::string> refuseDialogues;
-                int diffPct = (mktPrice > 0) ? ((curPrice - mktPrice) * 100 / mktPrice) : 0;
+                int diffPct = (avgCompPrice > 0) ? ((curPrice - avgCompPrice) * 100 / avgCompPrice) : 0;
 
                 if (diffPct >= 40) {
                     refuseDialogues = {
-                        "Harganya kemahalan jauh dari pasaran!",
-                        "Terlalu mahal, saya cari toko lain.",
+                        "Harganya kemahalan jauh dari toko kompetitor!",
+                        "Toko sebelah jauh lebih murah, saya cari ke sana saja!",
                         "Harganya di luar budget sama sekali.",
-                        "Gila, mahal banget!"
+                        "Gila, mahal banget dibanding pasaran!"
+                    };
+                } else if (diffPct > 15) {
+                    refuseDialogues = {
+                        "Toko Berkah Mart jual ini lebih murah deh.",
+                        "Agak mahal dibanding toko lain di sekitar.",
+                        "Kayaknya di toko sebelah harganya lebih masuk akal.",
+                        "Kalau segini mending beli di kompetitor."
                     };
                 } else {
                     refuseDialogues = {
@@ -603,7 +616,7 @@ void Customer::Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidP
                 if (!penaltyPriceTooHighApplied) {
                     satisfaction = std::clamp(satisfaction - 15, 0, 100);
                     penaltyPriceTooHighApplied = true;
-                    specificFeedback = "Harga " + GetProductInfo(currentTargetProduct).name + " terlalu mahal!";
+                    specificFeedback = "Harga " + GetProductInfo(currentTargetProduct).name + " lebih mahal dari toko lain!";
                 }
 
                 // Skip to next item

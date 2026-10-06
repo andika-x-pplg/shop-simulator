@@ -157,8 +157,25 @@ struct SaveData {
     bool challengeCompleted;
     bool challengeRewardClaimed;
 
-    // Stage 20: Market System Data
+    // Stage 20 & 21: Market System Data
     std::vector<MarketSaveData> marketEntries;
+    int playerPopularity;
+    float playerMarketShare;
+    int categoryDrinkTrend;
+    int categoryFoodTrend;
+    int categorySnackTrend;
+    int categoryHouseholdTrend;
+    int marketEventId;
+    int marketEventDaysLeft;
+    struct CompetitorSaveData {
+        int id;
+        std::string name;
+        int reputation;
+        int popularity;
+        float marketShare;
+        std::vector<std::pair<int, int>> prices;
+    };
+    std::vector<CompetitorSaveData> competitorEntries;
 
     SaveData();
 };

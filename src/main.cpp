@@ -223,10 +223,10 @@ int main() {
                 dailyStats.ResetDaily();
                 priceMgr.ResetDailyStats();
 
-                // Stage 20: Daily Market Fluctuations & Trend Updates
+                // Stage 21: Daily Market Simulation, Competitors & Trend Updates
                 std::string mktNotice;
                 Color mktCol;
-                marketSystem.UpdateDailyMarket(gameTime.GetCurrentDay(), mktNotice, mktCol);
+                marketSystem.UpdateDailyMarket(gameTime.GetCurrentDay(), reputation.GetReputation(), dailyStats.GetDailyCustomers(), dailyStats.GetDailyRevenue(), mktNotice, mktCol);
 
                 // Pay employee daily salaries (Stage 16)
                 std::string salaryNotice;
@@ -970,9 +970,17 @@ int main() {
             }
         }
         // -------------------------------------------------------------
-        // Market Dynamics Modal Inputs (J) (Stage 20)
+        // Market Dynamics & Competition Modal Inputs (J) (Stage 21)
         // -------------------------------------------------------------
         else if (marketSystem.IsMenuOpen()) {
+            if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_LEFT)) {
+                marketSystem.PreviousTab();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
+            if (IsKeyPressed(KEY_E) || IsKeyPressed(KEY_RIGHT)) {
+                marketSystem.NextTab();
+                audioMgr.PlayEvent(SoundEvent::CLICK);
+            }
             if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
                 marketSystem.PreviousProduct();
                 audioMgr.PlayEvent(SoundEvent::CLICK);
@@ -988,9 +996,7 @@ int main() {
                 audioMgr.PlayEvent(SoundEvent::CLICK);
             }
             if (IsKeyPressed(KEY_TAB)) {
-                // Quick transition to supplier order
-                marketSystem.SetMenuOpen(false);
-                supplier.SetMenuOpen(true);
+                marketSystem.NextTab();
                 audioMgr.PlayEvent(SoundEvent::CLICK);
             }
         }
@@ -1139,11 +1145,11 @@ int main() {
                 customers.push_back(newCust);
                 customerCounter++;
                 
-                // Spawn frequency influenced by store reputation & event spawn multipliers (Stage 18)
+                // Spawn frequency influenced by store reputation, popularity & market share (Stage 21)
                 float repFactor = (float)reputation.GetReputation() / 100.0f; // 0.0 to 1.0
                 float baseInterval = (5.5f - (repFactor * 2.2f)) + (customerCounter % 3) * 0.8f;
-                float spawnMult = eventMgr.GetCustomerSpawnRateMultiplier();
-                spawnTimer = std::max(1.2f, baseInterval / spawnMult);
+                float spawnMult = eventMgr.GetCustomerSpawnRateMultiplier() * marketSystem.GetCustomerAttractionMultiplier();
+                spawnTimer = std::max(1.0f, baseInterval / spawnMult);
             }
         }
 
@@ -1165,7 +1171,7 @@ int main() {
             int paidAmount = 0;
             std::string paidProductSummary = "";
 
-            cust.Update(deltaTime, shop, qIndex, didPay, paidAmount, paidProductSummary);
+            cust.Update(deltaTime, shop, qIndex, didPay, paidAmount, paidProductSummary, reputation.GetReputation());
 
             // Record customer revenue exactly once through single Finance system & Daily Stats
             if (didPay && paidAmount > 0) {
@@ -1302,7 +1308,7 @@ int main() {
             DrawText("M / ESC  : Game Menu & Save/Load", 25, 127, 12, { 255, 215, 0, 255 });
             DrawText("F5 / F9  : Quick Save / Quick Load", 25, 143, 12, { 100, 220, 255, 255 });
             DrawText("TAB      : Menu Supplier & Order", 25, 159, 12, { 255, 180, 50, 255 });
-            DrawText("J        : Pasar & Tren Ekonomi (Stage 20)", 25, 175, 12, { 46, 204, 113, 255 });
+            DrawText("J        : Pasar & Kompetisi Toko (Stage 21)", 25, 175, 12, { 46, 204, 113, 255 });
             DrawText("P        : Manajemen Harga Jual", 25, 191, 12, { 100, 200, 255, 255 });
             DrawText("K        : Manajemen Karyawan (Stage 16-17)", 25, 207, 12, { 0, 230, 200, 255 });
             DrawText("L        : Event Acak & Tantangan (Stage 18)", 25, 223, 12, { 241, 196, 15, 255 });
@@ -1538,10 +1544,10 @@ int main() {
             }
 
             // ==========================================
-            // MARKET DYNAMICS & ECONOMY MODAL (J) (Stage 20)
+            // MARKET DYNAMICS & COMPETITION MODAL (J) (Stage 21)
             // ==========================================
             if (marketSystem.IsMenuOpen()) {
-                marketSystem.RenderUI(screenWidth, screenHeight, finance.GetCurrentBalance(), gameTime.GetCurrentDay());
+                marketSystem.RenderUI(screenWidth, screenHeight, finance.GetCurrentBalance(), gameTime.GetCurrentDay(), reputation.GetReputation());
             }
 
             // ==========================================
@@ -2125,28 +2131,51 @@ int main() {
             }
 
             // ==========================================
-            // CUSTOMER AI DEBUG OVERLAY (Tahap 14 - F3)
+            // ==========================================
+            // CUSTOMER & MARKET AI DEBUG OVERLAY (Stage 21 - F3)
             // ==========================================
             if (showAiDebug && !anyModalOpen) {
-                int dbgW = 440;
-                int dbgH = 35 + std::min(6, (int)customers.size()) * 42;
+                int dbgW = 460;
+                int custCount = std::min(5, (int)customers.size());
+                int dbgH = 145 + custCount * 36;
                 int dbgX = screenWidth - dbgW - 15;
                 int dbgY = 80;
 
-                DrawRectangle(dbgX, dbgY, dbgW, dbgH, { 15, 20, 30, 235 });
+                DrawRectangle(dbgX, dbgY, dbgW, dbgH, { 15, 20, 30, 240 });
                 DrawRectangleLines(dbgX, dbgY, dbgW, dbgH, { 0, 200, 255, 255 });
-                DrawText("CUSTOMER AI DEBUG MONITOR [F3: Tutup]", dbgX + 15, dbgY + 10, 14, { 0, 255, 255, 255 });
+                DrawText("MARKET & CUSTOMER AI DEBUG [F3: Tutup]", dbgX + 15, dbgY + 10, 13, { 0, 255, 255, 255 });
 
-                int rowY = dbgY + 32;
-                for (size_t i = 0; i < customers.size() && i < 6; ++i) {
+                // Market & Competition overview
+                std::string mktDbg1 = "[MARKET] Rep: " + std::to_string(reputation.GetReputation()) + 
+                                      " | Pop: " + std::to_string(marketSystem.GetPlayerPopularity()) + 
+                                      " | Share: " + TextFormat("%.1f%%", marketSystem.GetPlayerMarketShare()) +
+                                      " | Rata2: Rp" + std::to_string(marketSystem.GetPlayerAveragePrice());
+                DrawText(mktDbg1.c_str(), dbgX + 15, dbgY + 30, 11, { 241, 196, 15, 255 });
+
+                const auto& comps = marketSystem.GetCompetitors();
+                std::string compDbg = "[KOMPETITOR] ";
+                for (size_t c = 0; c < comps.size() && c < 3; ++c) {
+                    compDbg += "C" + std::to_string(comps[c].id) + ":" + TextFormat("%.0f%%", comps[c].marketShare) + " ";
+                }
+                compDbg += "| Pasar Rata2: Rp" + std::to_string(marketSystem.GetOverallAverageMarketPrice());
+                DrawText(compDbg.c_str(), dbgX + 15, dbgY + 48, 11, { 100, 220, 255, 255 });
+
+                std::string evDbg = marketSystem.HasActiveMarketEvent() ? ("[EVENT] " + marketSystem.GetActiveMarketEvent().name) : "[EVENT] Pasar Normal";
+                DrawText(evDbg.c_str(), dbgX + 15, dbgY + 66, 11, { 46, 204, 113, 255 });
+
+                DrawLine(dbgX + 15, dbgY + 84, dbgX + dbgW - 15, dbgY + 84, { 50, 70, 90, 255 });
+
+                DrawText("ANTREAN / CUSTOMER TERPILIH:", dbgX + 15, dbgY + 90, 11, { 200, 220, 240, 255 });
+
+                int rowY = dbgY + 108;
+                for (size_t i = 0; i < customers.size() && i < 5; ++i) {
                     const auto& c = customers[i];
                     std::string line1 = "#" + std::to_string(c.GetId()) + " " + c.GetName() + 
-                                        " [" + c.GetCustomerTypeString() + "] Sat:" + std::to_string(c.GetSatisfaction()) + "%";
-                    std::string line2 = "  State: " + c.GetStateString() + " | Item: " + c.GetCarriedSummaryString();
+                                        " [" + c.GetCustomerTypeString() + "] Sat:" + std::to_string(c.GetSatisfaction()) + "% " +
+                                        "St: " + c.GetStateString();
                     
-                    DrawText(line1.c_str(), dbgX + 15, rowY, 12, { 255, 220, 100, 255 });
-                    DrawText(line2.c_str(), dbgX + 15, rowY + 16, 11, { 180, 220, 255, 255 });
-                    rowY += 40;
+                    DrawText(line1.c_str(), dbgX + 15, rowY, 11, { 255, 220, 100, 255 });
+                    rowY += 34;
                 }
             }
 

@@ -44,7 +44,7 @@ public:
     Customer(int id, const std::string& name, CustomerType type, Vector3 spawnPos, Color bodyColor, Color shirtColor);
     ~Customer() = default;
 
-    void Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidPay, int& outPaidAmount, std::string& outPaidProductSummary);
+    void Update(float deltaTime, Shop& shop, int queueIndex, bool& outDidPay, int& outPaidAmount, std::string& outPaidProductSummary, int playerReputation = 50);
     void Render();
 
     CustomerState GetState() const { return state; }

@@ -43,7 +43,10 @@ SaveData::SaveData()
       betterDisplayOwned(false), extraStorageRackOwned(false), betterCashierOwned(false),
       activeEventId(0), activeEventDuration(0.0f), activeEventProduct(0),
       challengeId(0), challengeTarget(0), challengeCurrent(0), challengeProduct(0),
-      challengeMoneyReward(0), challengeRepReward(0), challengeCompleted(false), challengeRewardClaimed(false)
+      challengeMoneyReward(0), challengeRepReward(0), challengeCompleted(false), challengeRewardClaimed(false),
+      playerPopularity(45), playerMarketShare(25.0f),
+      categoryDrinkTrend(1), categoryFoodTrend(1), categorySnackTrend(1), categoryHouseholdTrend(1),
+      marketEventId(0), marketEventDaysLeft(0)
 {
 }
 
@@ -248,9 +251,22 @@ bool SaveSystem::SaveGame(const std::string& filepath,
     data.challengeCompleted = eventMgr.IsChallengeCompleted();
     data.challengeRewardClaimed = eventMgr.IsChallengeRewardClaimed();
 
-    // Stage 20: Market Data Export
-    for (const auto& entry : marketSystem.ExportMarketSaveData()) {
+    // Stage 21: Full Market System Data Export
+    auto mktFullSave = marketSystem.ExportFullSaveData();
+    data.playerPopularity = mktFullSave.playerPopularity;
+    data.playerMarketShare = mktFullSave.playerMarketShare;
+    data.categoryDrinkTrend = mktFullSave.categoryDrinkTrend;
+    data.categoryFoodTrend = mktFullSave.categoryFoodTrend;
+    data.categorySnackTrend = mktFullSave.categorySnackTrend;
+    data.categoryHouseholdTrend = mktFullSave.categoryHouseholdTrend;
+    data.marketEventId = mktFullSave.activeEventId;
+    data.marketEventDaysLeft = mktFullSave.activeEventDaysLeft;
+
+    for (const auto& entry : mktFullSave.marketEntries) {
         data.marketEntries.push_back({ entry.productType, entry.currentMarketPrice, entry.currentSupplierPrice, entry.demand, entry.trend });
+    }
+    for (const auto& cEntry : mktFullSave.competitorEntries) {
+        data.competitorEntries.push_back({ cEntry.id, cEntry.name, cEntry.reputation, cEntry.popularity, cEntry.marketShare, cEntry.prices });
     }
 
     // Write structured JSON formatted save
@@ -363,6 +379,32 @@ bool SaveSystem::SaveGame(const std::string& filepath,
              << ", \"prod\": " << emp.productivity
              << ", \"status\": " << emp.status << " }"
              << (i + 1 < data.activeEmployees.size() ? ",\n" : "\n");
+    }
+    file << "  ],\n";
+    file << "  \"marketState\": {\n";
+    file << "    \"playerPopularity\": " << data.playerPopularity << ",\n";
+    file << "    \"playerMarketShare\": " << std::fixed << std::setprecision(2) << data.playerMarketShare << ",\n";
+    file << "    \"trendDrink\": " << data.categoryDrinkTrend << ",\n";
+    file << "    \"trendFood\": " << data.categoryFoodTrend << ",\n";
+    file << "    \"trendSnack\": " << data.categorySnackTrend << ",\n";
+    file << "    \"trendHousehold\": " << data.categoryHouseholdTrend << ",\n";
+    file << "    \"eventId\": " << data.marketEventId << ",\n";
+    file << "    \"eventDaysLeft\": " << data.marketEventDaysLeft << "\n";
+    file << "  },\n";
+    file << "  \"competitors\": [\n";
+    for (size_t i = 0; i < data.competitorEntries.size(); ++i) {
+        const auto& c = data.competitorEntries[i];
+        file << "    { \"id\": " << c.id
+             << ", \"name\": \"" << c.name << "\""
+             << ", \"rep\": " << c.reputation
+             << ", \"pop\": " << c.popularity
+             << ", \"share\": " << std::fixed << std::setprecision(2) << c.marketShare
+             << ", \"prices\": [";
+        for (size_t pIdx = 0; pIdx < c.prices.size(); ++pIdx) {
+            file << "{\"t\":" << c.prices[pIdx].first << ",\"p\":" << c.prices[pIdx].second << "}"
+                 << (pIdx + 1 < c.prices.size() ? "," : "");
+        }
+        file << "] }" << (i + 1 < data.competitorEntries.size() ? ",\n" : "\n");
     }
     file << "  ],\n";
     file << "  \"market\": [\n";
@@ -695,8 +737,61 @@ bool SaveSystem::LoadGame(const std::string& filepath,
                            data.challengeId, data.challengeTarget, data.challengeCurrent, data.challengeProduct,
                            data.challengeMoneyReward, data.challengeRepReward, data.challengeCompleted, data.challengeRewardClaimed);
 
-    // Deserialize Stage 20 Market Data
-    std::vector<MarketSystem::MarketSaveEntry> marketLoaded;
+    // Deserialize Stage 21 Market System (MarketState, Competitors, & Product Market Data)
+    MarketSystem::MarketStateSave mktStateSave;
+    mktStateSave.playerPopularity = ReadInt(content, "playerPopularity", 45);
+    mktStateSave.playerMarketShare = ReadFloat(content, "playerMarketShare", 25.0f);
+    mktStateSave.categoryDrinkTrend = ReadInt(content, "trendDrink", 1);
+    mktStateSave.categoryFoodTrend = ReadInt(content, "trendFood", 1);
+    mktStateSave.categorySnackTrend = ReadInt(content, "trendSnack", 1);
+    mktStateSave.categoryHouseholdTrend = ReadInt(content, "trendHousehold", 1);
+    mktStateSave.activeEventId = ReadInt(content, "eventId", 0);
+    mktStateSave.activeEventDaysLeft = ReadInt(content, "eventDaysLeft", 0);
+
+    // 1. Competitors Array
+    size_t compArrayPos = content.find("\"competitors\": [");
+    if (compArrayPos != std::string::npos) {
+        size_t arrayEnd = content.find(']', compArrayPos);
+        if (arrayEnd != std::string::npos) {
+            std::string compSection = content.substr(compArrayPos, arrayEnd - compArrayPos);
+            size_t objStart = 0;
+            while ((objStart = compSection.find('{', objStart)) != std::string::npos) {
+                size_t objEnd = compSection.find('}', objStart);
+                if (objEnd == std::string::npos) break;
+
+                std::string objStr = compSection.substr(objStart, objEnd - objStart + 1);
+                MarketSystem::CompetitorSaveEntry cEntry;
+                cEntry.id = ReadInt(objStr, "id", 0);
+                ExtractJsonValue(objStr, "name", cEntry.name);
+                cEntry.reputation = ReadInt(objStr, "rep", 60);
+                cEntry.popularity = ReadInt(objStr, "pop", 60);
+                cEntry.marketShare = ReadFloat(objStr, "share", 25.0f);
+
+                // Nested prices: "prices": [{"t":1,"p":5000},...]
+                size_t pArrStart = objStr.find("\"prices\": [");
+                if (pArrStart != std::string::npos) {
+                    size_t pArrEnd = objStr.find(']', pArrStart);
+                    if (pArrEnd != std::string::npos) {
+                        std::string pSec = objStr.substr(pArrStart, pArrEnd - pArrStart);
+                        size_t pObj = 0;
+                        while ((pObj = pSec.find('{', pObj)) != std::string::npos) {
+                            size_t pObjE = pSec.find('}', pObj);
+                            if (pObjE == std::string::npos) break;
+                            std::string pPairStr = pSec.substr(pObj, pObjE - pObj + 1);
+                            int t = ReadInt(pPairStr, "t", 0);
+                            int p = ReadInt(pPairStr, "p", 5000);
+                            cEntry.prices.push_back({ t, p });
+                            pObj = pObjE + 1;
+                        }
+                    }
+                }
+                mktStateSave.competitorEntries.push_back(cEntry);
+                objStart = objEnd + 1;
+            }
+        }
+    }
+
+    // 2. Product Market Entries
     size_t mktArrayPos = content.find("\"market\": [");
     if (mktArrayPos != std::string::npos) {
         size_t arrayEnd = content.find(']', mktArrayPos);
@@ -714,15 +809,14 @@ bool SaveSystem::LoadGame(const std::string& filepath,
                 entry.currentSupplierPrice = ReadInt(objStr, "supPrice", 3000);
                 entry.demand = ReadInt(objStr, "demand", 50);
                 entry.trend = ReadInt(objStr, "trend", 1);
-                marketLoaded.push_back(entry);
+                mktStateSave.marketEntries.push_back(entry);
 
                 objStart = objEnd + 1;
             }
         }
     }
-    if (!marketLoaded.empty()) {
-        marketSystem.ImportMarketSaveData(marketLoaded);
-    }
+    
+    marketSystem.ImportFullSaveData(mktStateSave);
 
     // Deserialize Stats (Tahap 15)
     size_t statArrayPos = content.find("\"stats\": [");
